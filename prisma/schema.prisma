@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model action {
+  action_id Int      @id
+  title     String?  @db.VarChar(255)
+  text      String?  @db.MediumText
+  times     Int?
+  frequency String?  @db.VarChar(50)
+  bonus     Boolean?
+}
+
+model attack {
+  attack_id   Int      @id
+  name        String?  @db.VarChar(50)
+  attack_icon String?  @db.VarChar(50)
+  attack_type String?  @db.VarChar(50)
+  range       String?  @db.VarChar(50)
+  range_type  String?  @db.VarChar(50)
+  hit_dc      String?  @db.VarChar(50)
+  damage      String?  @db.VarChar(50)
+  damage_icon String?  @db.VarChar(50)
+  notes       String?  @db.VarChar(255)
+  bonus       Boolean?
+}
+
+model card {
+  card_id    Int    @id
+  name       String @default("") @db.VarChar(50)
+  rank       String @default("") @db.VarChar(5)
+  keywords   String @default("") @db.VarChar(255)
+  ecology    String @db.MediumText
+  strength   String @db.MediumText
+  weakness   String @db.MediumText
+  card_image String @db.MediumText
+}
+
+model character_classes {
+  character_id Int
+  class_name   character_classes_class_name
+  subclass     String?                      @db.VarChar(50)
+  level        Int?
+
+  @@id([character_id, class_name])
+}
+
+model character_sheet {
+  character_id   Int                 @id
+  owner_id       Int
+  name           String              @default("") @db.VarChar(50)
+  sex            character_sheet_sex @default(Male)
+  race           String?             @db.VarChar(50)
+  character_icon String?             @db.MediumText
+  proficiency    Int?
+  currentxp      Int?
+  speed          Int?
+  inspiration    Boolean?
+  spellcaster    Boolean?
+  initiative     Int?
+  armor          Int?
+  currenthp      Int?
+  maxhp          Int?
+  temphp         Int?
+  defences       String?             @db.VarChar(255)
+  conditions     String?             @db.VarChar(255)
+  user           user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
+  proficiencies  proficiencies?
+  saving_throws  saving_throws?
+  senses         senses?
+  skills         skills?
+  stats          stats[]
+
+  @@index([owner_id], map: "owner_id")
+}
+
+model proficiencies {
+  character_id    Int             @id
+  armor           String?         @db.VarChar(255)
+  weapons         String?         @db.VarChar(255)
+  tools           String?         @db.VarChar(255)
+  languages       String?         @db.VarChar(255)
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_proficiencies_character_sheet")
+}
+
+model saving_throws {
+  character_id    Int             @id
+  name            String?         @db.VarChar(50)
+  mod             Int?
+  proficient      Boolean?
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_saving_throws_character_sheet")
+}
+
+model senses {
+  character_id    Int             @id
+  perception      String?         @db.VarChar(50)
+  investigation   String?         @db.VarChar(50)
+  insight         String?         @db.VarChar(50)
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_senses_character_sheet")
+}
+
+model skills {
+  character_id    Int             @id
+  name            String          @default("") @db.VarChar(50)
+  proficient      Boolean         @default(false)
+  modifier        String          @default("0") @db.VarChar(5)
+  bonus           Int             @default(0)
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet")
+}
+
+model stats {
+  character_id    Int
+  name            Int
+  score           Int?
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_stats_character_sheet")
+
+  @@id([character_id, name])
+}
+
+model user {
+  user_id         Int               @id @default(autoincrement())
+  username        String            @default("0") @db.VarChar(50)
+  email           String            @default("0") @db.VarChar(50)
+  password        String            @db.MediumText
+  icon            String            @db.Text
+  status          user_status       @default(Player)
+  character_sheet character_sheet[]
+}
+
+enum character_classes_class_name {
+  barbarian
+  bard
+  cleric
+  druid
+  fighter
+  monk
+  paladin
+  ranger
+  rogue
+  sorcerer
+  warlock
+  wizard
+}
+
+enum character_sheet_sex {
+  Male
+  Female
+}
+
+enum user_status {
+  DM
+  Player
+  Admin
+}

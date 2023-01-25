@@ -1,18 +1,23 @@
 {
 	"dependencies": {
-		"bcryptjs":"^2.4.3",
-		"body-parser":"^1.20.1",
-		"cors":"^2.8.5",
-		"envdot":"^0.0.3",
-		"express":"4.18.2",
-		"express-fileupload":"^1.4.0",
-		"jsonwebtoken":"^8.5.1",
-		"mysql2":"^2.3.3"
+		"@prisma/client": "^4.9.0",
+		"bcryptjs": "^2.4.3",
+		"body-parser": "^1.20.1",
+		"cors": "^2.8.5",
+		"envdot": "^0.0.3",
+		"express": "4.18.2",
+		"express-fileupload": "^1.4.0",
+		"jsonwebtoken": "^8.5.1",
+		"mysql2": "^2.3.3"
 	},
 	"devDependencies": {
-		"nodemon":"^2.0.20"
+		"nodemon": "^2.0.20",
+		"prisma": "^4.9.0"
 	},
-	"script": {
+	"scripts": {
 		"start": "nodemon server.js"
+	},
+	"prisma": {
+		"seed": "node ./scripts/script.ts"
 	}
 }

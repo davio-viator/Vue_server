@@ -1,4 +1,4 @@
-const connection = require('./lib/db.js')
+// const connection = require('./lib/db.js')
 const express = require('express');
 const bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
@@ -18,6 +18,10 @@ app.use((req,res,next)=>{
   next();
 });
 
+const character_router = require('./routes/character_router.js');
+const user_router = require('./routes/user_router.js')
+app.use('/api/v1',character_router,user_router)
+
 const cards = []
 
 app.get('/api/cards',(req,res) => {
@@ -32,6 +36,8 @@ app.post('/api/card', (req,res) => {
   if(newlength>oldlength) res.status(200).send({res: "card added"})
   else res.sendStatus(500)
 })
+
+
 
 app.listen(port, () => {
   console.log(`Server listening on the port::${port}`)
