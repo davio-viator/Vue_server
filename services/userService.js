@@ -1,4 +1,5 @@
 const  { PrismaClient } = require('@prisma/client');
+const { PasswordEncryptor } = require('../services/encryptor')
 
 const prisma = new PrismaClient();
 
@@ -29,10 +30,15 @@ const prisma = new PrismaClient();
   }
 
   function createUser(req,res) {
-    let clone = [...req.body]
-    
+    let clone = {...req.body}
+    // let otherClone = Object.assign({},req.body);
+    let hashedpassword = PasswordEncryptor(req,res);
+    clone.password = hashedpassword
     prisma.user.create({
-      data:req.clone
+      data:clone
+    })
+    .catch(err => {
+      res.status(400).json({message:"Couldn't create the user"})
     })
   }
 
@@ -40,5 +46,6 @@ const prisma = new PrismaClient();
 
 module.exports = {
   getUser,
-  getUsers
+  getUsers,
+  createUser
 }

@@ -31,14 +31,15 @@ model attack {
 }
 
 model card {
-  card_id    Int    @id
-  name       String @default("") @db.VarChar(50)
-  rank       String @default("") @db.VarChar(5)
-  keywords   String @default("") @db.VarChar(255)
-  ecology    String @db.MediumText
-  strength   String @db.MediumText
-  weakness   String @db.MediumText
-  card_image String @db.MediumText
+  card_id    Int     @id @default(autoincrement())
+  name       String  @default("") @db.VarChar(50)
+  rank       String  @default("") @db.VarChar(5)
+  keywords   String  @default("") @db.VarChar(255)
+  ecology    String  @db.MediumText
+  strength   String  @db.MediumText
+  weakness   String  @db.MediumText
+  card_image String  @db.MediumText
+  notes      notes[]
 }
 
 model character_classes {
@@ -125,11 +126,24 @@ model stats {
 model user {
   user_id         Int               @id @default(autoincrement())
   username        String            @default("0") @db.VarChar(50)
-  email           String            @default("0") @db.VarChar(50)
+  email           String            @unique(map: "email") @default("0") @db.VarChar(50)
   password        String            @db.MediumText
   icon            String            @db.Text
   status          user_status       @default(Player)
   character_sheet character_sheet[]
+  notes           notes[]
+}
+
+model notes {
+  card_id Int
+  user_id Int
+  title   String? @db.VarChar(50)
+  content String? @db.MediumText
+  card    card    @relation(fields: [card_id], references: [card_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__card")
+  user    user    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_notes_user")
+
+  @@id([card_id, user_id])
+  @@index([user_id], map: "FK_notes_user")
 }
 
 enum character_classes_class_name {

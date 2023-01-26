@@ -20,7 +20,8 @@ app.use((req,res,next)=>{
 
 const character_router = require('./routes/character_router.js');
 const user_router = require('./routes/user_router.js')
-app.use('/api/v1',character_router,user_router)
+const card_router = require('./routes/card_router')
+app.use('/api/v1',character_router,user_router,card_router)
 
 const cards = []
 

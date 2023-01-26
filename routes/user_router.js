@@ -11,5 +11,9 @@ router.get('/user/:user_id',(req,res) => {
   userService.getUser(req,res)
 })
 
+router.post('/user',(req,res) => {
+  userService.createUser(req,res)
+})
+
 
 module.exports = router
