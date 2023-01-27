@@ -7,7 +7,7 @@ const path = require('path');
 const port = 3080;
 const cors = require('cors')
 
-app.use(bodyParser.json())
+app.use(bodyParser.json({limit: '3mb'}))
 app.use(cors());
 app.use(express.static(path.join(__dirname,'build')));
 app.use(fileUpload())

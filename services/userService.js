@@ -34,18 +34,27 @@ const prisma = new PrismaClient();
     // let otherClone = Object.assign({},req.body);
     let hashedpassword = PasswordEncryptor(req,res);
     clone.password = hashedpassword
+    delete clone.verify_password 
     prisma.user.create({
       data:clone
     })
+    .then(result => {
+      res.json({message:" user sucessfully added"})
+    })
     .catch(err => {
-      res.status(400).json({message:"Couldn't create the user"})
+      if(err.code === 'P2002') res.status(400).json({message: "this e-mail address is already used",status: 400})
+      else res.status(500).json({message:"Couldn't create the user",status:400})
     })
   }
 
+  function loginUser(req,res) {
+    res.send('loggedIn')
+  }
 
 
 module.exports = {
   getUser,
   getUsers,
-  createUser
+  createUser,
+  loginUser
 }
