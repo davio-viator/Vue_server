@@ -31,11 +31,11 @@ const prisma = global.prisma;
       })
   }
 
-  function createUser(req,res) {
+  async function createUser(req,res) {
     let clone = {...req.body}
     // let otherClone = Object.assign({},req.body);
     console.log("body: ",req.body)
-    const jwt = createToken(req,res);
+    const jwt = await createToken(req,res);
     let hashedpassword = PasswordEncryptor(req,res);
     clone.password = hashedpassword
     delete clone.verify_password 
@@ -44,7 +44,14 @@ const prisma = global.prisma;
     })
     .then(result => {
       console.log("result: ",result)
-      res.json({message:" user sucessfully added",token:jwt})
+      const userObj = {
+        id:result.user_id,
+        username:result.username,
+        icon:result.icon,
+        firstname:result.firstname,
+        lastname:result.lastname
+      }
+      res.json({message:" user sucessfully added",token:jwt,user:userObj})
     })
     .catch(err => {
       if(err.code === 'P2002') res.status(400).json({message: "this e-mail address is already used",status: 400})
@@ -57,7 +64,14 @@ const prisma = global.prisma;
     const token = await createToken(req,res) 
     console.log(token)
     console.log(req.userData)
-    res.status(200).json({message:'loggedIn',token})
+    const userObj = {
+      id:req.body.id,
+      username:req.body.username,
+      icon:req.body.icon,
+      firstname:req.body.firstname,
+      lastname:req.body.lastname
+    }
+    res.status(200).json({message:'loggedIn',token,user:userObj})
     // res.status(200).json({message:'loggedIn',status:200,redirectUrl:redirectUrl})
   }
 

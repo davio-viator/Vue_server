@@ -130,6 +130,8 @@ model user {
   password        String            @db.MediumText
   icon            String            @db.Text
   status          user_status       @default(Player)
+  firstname       String?           @db.VarChar(50)
+  lastname        String?           @db.VarChar(50)
   character_sheet character_sheet[]
   notes           notes[]
 }
