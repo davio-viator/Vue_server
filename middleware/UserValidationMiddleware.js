@@ -1,5 +1,6 @@
-// const { isEmail } = require('validator/es/lib/isEmail');
-const  { PrismaClient } = require('@prisma/client');
+const jwt = require("jsonwebtoken");
+const dotenv = require('dotenv')
+dotenv.config()
 const crypt = require('bcryptjs');
 
 const isEmail = (email) => {
@@ -13,7 +14,7 @@ function ValidateRegistration(req, res,next) {
   const status = req.body.status;
   const password = req.body.password;
   const verify_password = req.body.verify_password; 
-  console.log(password,verify_password);
+  // console.log(password,verify_password);
   if(!username || username.length < 3){
     return res.status(400).json({
       message: "The username needs to be more than 3 characters",
@@ -53,7 +54,7 @@ function ValidateRegistration(req, res,next) {
 }
 
 function ValidateLogin(req, res,next) {  
-  const prisma = new PrismaClient();
+  const prisma = global.prisma;
   const email = req.body.email;
   const password = req.body.password;
 
@@ -82,7 +83,27 @@ function ValidateLogin(req, res,next) {
 
 }
 
+function validateToken(req,res,next){
+  console.log(req.userData)
+  try {  
+    const token = req.headers.authorization.split(' ')[1];
+    // console.log("token: ",token)
+    const decoded = jwt.verify(
+      token,
+      JWT_SECRET
+      );
+      req.userData = decoded;
+    next();
+  } catch (err) {
+    // console.log("authorization header: ",req.headers.authorization)
+    return res.status(401).send({
+      msg: 'Your session is not valid!'
+    });
+  }
+}
+
 module.exports = {
   ValidateRegistration,
   ValidateLogin,
+  validateToken
 }

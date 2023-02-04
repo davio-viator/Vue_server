@@ -6,6 +6,9 @@ const app = express();
 const path = require('path');
 const port = 3080;
 const cors = require('cors')
+const  { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+global.prisma = prisma
 
 app.use(bodyParser.json({limit: '3mb'}))
 app.use(cors());

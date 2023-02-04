@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router();
 
-const {ValidateRegistration, ValidateLogin} = require('../middleware/UserValidationMiddleware')
+const {ValidateRegistration, ValidateLogin, validateToken} = require('../middleware/UserValidationMiddleware')
 
 const userService = require('../services/userService.js')
 
@@ -21,5 +21,8 @@ router.post('/signIn',ValidateLogin,(req,res) => {
   userService.loginUser(req,res)
 })
 
+router.post('/user-token',validateToken,(req,res) => {
+  res.status(200).send('validated');
+})
 
 module.exports = router
