@@ -64,13 +64,13 @@ function ValidateLogin(req, res,next) {
     select:{password: true,username:true,firstname:true,lastname:true,user_id:true,icon:true},
   })
     .then(result => {
+      if(result === null) return res.status(400).json({message:"The email given doesn't exist!"})
       const passwordIsCorrect = crypt.compareSync(password,result.password)
       req.body.username = result.username;
       req.body.firstname = result.firstname;
       req.body.lastname = result.lastname;
       req.body.id = result.user_id;
       req.body.icon = result.icon
-      console.log(req.body)
       if(!passwordIsCorrect) {
         res.status(400).json({
           message:"Wrong password try again",
