@@ -25,4 +25,14 @@ router.post('/user-token',validateToken,(req,res) => {
   res.status(200).send('validated');
 })
 
+router.get('/characters',validateToken,async (req,res) => {
+  const characterDb = await userService.getUserCharacters(req,res)
+  try {
+    res.status(200).json({characters:characterDb})
+  } catch (error) {
+    console.log(error)
+    res.status(500).send(error)
+  }
+})
+
 module.exports = router

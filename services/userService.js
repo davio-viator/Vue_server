@@ -80,10 +80,74 @@ const prisma = global.prisma;
     // res.status(200).json({message:'loggedIn',status:200,redirectUrl:redirectUrl})
   }
 
+  async function getUserCharacters(req,res){
+    const user_id = parseInt(req.query.id);
+    const result = await global.prisma.character_sheet.findMany({
+      where:{owner_id:user_id},
+      select: {
+          firstname:true,lastname:true,race:true,character_id:true,character_icon:true,
+          character_classes: {
+            select: {
+              class_name:true,level:true,subclass:true
+            }
+          },
+      },
+    })
+
+    let characterArray = []
+    let returnValue
+    try {
+      result.forEach(elem => {
+        characterArray.push(createCharacter(elem))
+      })
+      returnValue = characterArray
+    } catch (error) {
+      console.log(error)
+       returnValue = res.status(400).json({
+        message:"something went wrong while retrieving the characters please try again"
+      })
+    }
+
+    return returnValue
+  }
+
+  function createCharacter(value){
+    const id = value.character_id
+    const firstname = value.firstname;
+    const lastname = value.lastname;
+    const race = value.race;
+    const characterIcon = value.character_icon 
+    const classValue = value.character_classes
+
+    let classes = []
+    let subClasses = []
+    let level = []
+
+    classValue.forEach(elem=>{
+      classes.push(elem.class_name)
+      if(elem.subclass !== null)subClasses.push(elem.subclass)
+      level.push(elem.level)
+    })    
+
+    const character = {
+      id,
+      firstname,
+      lastname,
+      race,
+      classes,
+      school:subClasses,
+      level:level.reduce((pSum,a) => pSum + a,0),
+      classLevel:level,
+      characterIcon
+    }
+    return character
+  }
+
 
 module.exports = {
   getUser,
   getUsers,
   createUser,
-  loginUser
+  loginUser,
+  getUserCharacters,
 }

@@ -43,39 +43,42 @@ model card {
 }
 
 model character_classes {
-  character_id Int
-  class_name   character_classes_class_name
-  subclass     String?                      @db.VarChar(50)
-  level        Int?
+  character_id    Int
+  class_name      character_classes_class_name
+  subclass        String?                      @db.VarChar(50)
+  level           Int?
+  character_sheet character_sheet              @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_classes_character_sheet")
 
   @@id([character_id, class_name])
 }
 
 model character_sheet {
-  character_id   Int                 @id
-  owner_id       Int
-  name           String              @default("") @db.VarChar(50)
-  sex            character_sheet_sex @default(Male)
-  race           String?             @db.VarChar(50)
-  character_icon String?             @db.MediumText
-  proficiency    Int?
-  currentxp      Int?
-  speed          Int?
-  inspiration    Boolean?
-  spellcaster    Boolean?
-  initiative     Int?
-  armor          Int?
-  currenthp      Int?
-  maxhp          Int?
-  temphp         Int?
-  defences       String?             @db.VarChar(255)
-  conditions     String?             @db.VarChar(255)
-  user           user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
-  proficiencies  proficiencies?
-  saving_throws  saving_throws?
-  senses         senses?
-  skills         skills?
-  stats          stats[]
+  character_id      Int                 @id
+  owner_id          Int
+  firstname         String              @default("") @db.VarChar(50)
+  lastname          String              @default("") @db.VarChar(50)
+  sex               character_sheet_sex @default(Male)
+  race              String?             @db.VarChar(50)
+  character_icon    String?             @db.MediumText
+  proficiency       Int?
+  currentxp         Int?
+  speed             Int?
+  inspiration       Boolean?
+  spellcaster       Boolean?
+  initiative        Int?
+  armor             Int?
+  currenthp         Int?
+  maxhp             Int?
+  temphp            Int?
+  defences          String?             @db.VarChar(255)
+  conditions        String?             @db.VarChar(255)
+  character_classes character_classes[]
+  user              user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
+  proficiencies     proficiencies?
+  saving_throws     saving_throws?
+  senses            senses?
+  skills            skills?
+  stats             stats[]
 
   @@index([owner_id], map: "owner_id")
 }
