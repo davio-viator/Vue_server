@@ -1,6 +1,7 @@
 // const  { PrismaClient } = require('@prisma/client');
 const { PasswordEncryptor } = require('../services/encryptor')
 const { createToken} = require('../modules/TokenMaker.js')
+const { uploadImage } = require('../modules/Uploader')
 
 const prisma = global.prisma;
 
@@ -37,8 +38,13 @@ const prisma = global.prisma;
     console.log("body: ",req.body)
     const jwt = await createToken(req,res);
     let hashedpassword = PasswordEncryptor(req,res);
+    const src = await uploadImage(req,res)
+    console.log(src)
+    clone.icon = src ? src : clone.icon.replace('/src/','./')
     clone.password = hashedpassword
     delete clone.verify_password 
+    delete clone.imgFile
+    console.log(clone)
     prisma.user.create({
       data:clone
     })
@@ -54,6 +60,7 @@ const prisma = global.prisma;
       res.json({message:" user sucessfully added",token:jwt,user:userObj})
     })
     .catch(err => {
+      console.log(err)
       if(err.code === 'P2002') res.status(400).json({message: "this e-mail address is already used",status: 400})
       else res.status(500).json({message:"Couldn't create the user",status:400})
     })
@@ -62,8 +69,6 @@ const prisma = global.prisma;
   async function loginUser(req,res) {
     const redirectUrl = req.get('origin')+'/'
     const token = await createToken(req,res) 
-    console.log(token)
-    console.log(req.userData)
     const userObj = {
       id:req.body.id,
       username:req.body.username,

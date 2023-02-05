@@ -4,39 +4,24 @@ env.config()
 const JWT_SECRET = process.env.JWT_SECRET
 
 async function createToken(req,res){
-  const username = req.body.username;
+  let username = req.body.username;
   const email = req.body.email;
+  const firstname = req.body?.firstname;
+  const lastname = req.body?.lastname;
   
   if(!!!username){ //if there is no username given
     let usernameDB = await global.prisma.user.findMany({
-      where: {
-        email:email
-      },
-      select:{
-        username: true
-      },
-      take:1
+      where: { email:email }, select:{ username: true }, take:1
     })
 
-    usernameDB = usernameDB[0].username
-
-    const token = jwt.sign(
-      {
-        username:usernameDB,
-        email:email
-      },
-      JWT_SECRET, {
-        expiresIn: '7d'
-      }
-    );
-
-    return token
-
+    username = usernameDB[0].username 
   }
-  const token = jwt.sign(
-    {
+
+  const token = jwt.sign({
       username: username,
       email: email,
+      firstname,
+      lastname
     },
     JWT_SECRET, {
       expiresIn: '7d'
