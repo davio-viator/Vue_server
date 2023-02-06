@@ -22,6 +22,9 @@ async function getCharacter(req,res){
         },
         proficiencies : {
           select: {armors:true, weapons:true, tools:true, languages: true}
+        },
+        skills : {
+          select : {name: true, proficient: true, modifier: true, bonus:true}
         }
     },
   })

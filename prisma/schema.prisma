@@ -77,7 +77,7 @@ model character_sheet {
   proficiencies     proficiencies?
   saving_throws     saving_throws[]
   senses            senses?
-  skills            skills?
+  skills            skills[]
   stats             stats[]
 
   @@index([owner_id], map: "owner_id")
@@ -85,10 +85,10 @@ model character_sheet {
 
 model proficiencies {
   character_id    Int             @id
-  armors          String?         @default("None") @db.VarChar(255)
   weapons         String?         @default("None") @db.VarChar(255)
   tools           String?         @default("None") @db.VarChar(255)
   languages       String?         @default("None") @db.VarChar(255)
+  armors          String?         @default("None") @db.VarChar(255)
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_proficiencies_character_sheet")
 }
 
@@ -111,12 +111,14 @@ model senses {
 }
 
 model skills {
-  character_id    Int             @id
+  character_id    Int
   name            String          @default("") @db.VarChar(50)
   proficient      Boolean         @default(false)
   modifier        String          @default("0") @db.VarChar(5)
   bonus           Int             @default(0)
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet")
+
+  @@id([character_id, name])
 }
 
 model stats {

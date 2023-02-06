@@ -15,7 +15,7 @@ async function uploadImage(req,res){
     try {
       const image = req.files.imgFile;
       const uploadPath = `${__dirname}/../../Dnd_Website_Vue/public/assets/images/${image.name}`;
-      src = `./assets/images/${image.name}`;
+      src = `/assets/images/${image.name}`;
     image.mv(uploadPath,(err) => {
       if(err) return err
       })
