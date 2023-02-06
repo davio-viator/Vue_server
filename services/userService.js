@@ -16,11 +16,11 @@ const prisma = global.prisma;
   }
 
   function getUser(req,res) {
-    // const id = parseInt(req.params["user_id"]);
     const { user_id } = req.params;
+    const id = parseInt(req.params["user_id"]);
     prisma.user.findMany({
       where: {
-        user_id: user_id
+        user_id: id
       }
     })
       .then(result => {

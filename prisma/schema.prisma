@@ -70,12 +70,12 @@ model character_sheet {
   currenthp         Int?
   maxhp             Int?
   temphp            Int?
-  defences          String?             @db.VarChar(255)
-  conditions        String?             @db.VarChar(255)
+  defences          String?             @default("") @db.VarChar(255)
+  conditions        String?             @default("") @db.VarChar(255)
   character_classes character_classes[]
   user              user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
   proficiencies     proficiencies?
-  saving_throws     saving_throws?
+  saving_throws     saving_throws[]
   senses            senses?
   skills            skills?
   stats             stats[]
@@ -85,19 +85,21 @@ model character_sheet {
 
 model proficiencies {
   character_id    Int             @id
-  armor           String?         @db.VarChar(255)
-  weapons         String?         @db.VarChar(255)
-  tools           String?         @db.VarChar(255)
-  languages       String?         @db.VarChar(255)
+  armors          String?         @default("None") @db.VarChar(255)
+  weapons         String?         @default("None") @db.VarChar(255)
+  tools           String?         @default("None") @db.VarChar(255)
+  languages       String?         @default("None") @db.VarChar(255)
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_proficiencies_character_sheet")
 }
 
 model saving_throws {
-  character_id    Int             @id
-  name            String?         @db.VarChar(50)
+  character_id    Int
+  name            saving_throws_name
   mod             Int?
   proficient      Boolean?
-  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_saving_throws_character_sheet")
+  character_sheet character_sheet    @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_saving_throws_character_sheet")
+
+  @@id([character_id, name])
 }
 
 model senses {
@@ -175,4 +177,13 @@ enum user_status {
   DM
   Player
   Admin
+}
+
+enum saving_throws_name {
+  strength
+  intelligence
+  dexterity
+  wisdom
+  constitution
+  charisma
 }
