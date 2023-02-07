@@ -8,26 +8,29 @@ datasource db {
 }
 
 model action {
-  action_id Int      @id
-  title     String?  @db.VarChar(255)
-  text      String?  @db.MediumText
-  times     Int?
-  frequency String?  @db.VarChar(50)
-  bonus     Boolean?
+  action_id         Int                 @id
+  title             String?             @db.VarChar(255)
+  text              String?             @db.MediumText
+  times             Int?
+  frequency         String?             @db.VarChar(50)
+  bonus             Boolean?
+  character_actions character_actions[]
 }
 
 model attack {
-  attack_id   Int      @id
-  name        String?  @db.VarChar(50)
-  attack_icon String?  @db.VarChar(50)
-  attack_type String?  @db.VarChar(50)
-  range       String?  @db.VarChar(50)
-  range_type  String?  @db.VarChar(50)
-  hit_dc      String?  @db.VarChar(50)
-  damage      String?  @db.VarChar(50)
-  damage_icon String?  @db.VarChar(50)
-  notes       String?  @db.VarChar(255)
-  bonus       Boolean?
+  attack_id         Int                 @id
+  name              String?             @db.VarChar(50)
+  attack_icon       String?             @db.VarChar(50)
+  attack_type       String?             @db.VarChar(50)
+  range             String?             @db.VarChar(50)
+  range_type        String?             @db.VarChar(50)
+  hit_dc            String?             @db.VarChar(50)
+  damage            String?             @db.VarChar(50)
+  damage_icon       String?             @db.VarChar(50)
+  notes             String?             @db.VarChar(255)
+  bonus             Boolean?
+  isSpell           Boolean?
+  character_attacks character_attacks[]
 }
 
 model card {
@@ -72,6 +75,8 @@ model character_sheet {
   temphp            Int?
   defences          String?             @default("") @db.VarChar(255)
   conditions        String?             @default("") @db.VarChar(255)
+  character_actions character_actions[]
+  character_attacks character_attacks[]
   character_classes character_classes[]
   user              user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
   proficiencies     proficiencies?
@@ -85,10 +90,10 @@ model character_sheet {
 
 model proficiencies {
   character_id    Int             @id
+  armors          String?         @default("None") @db.VarChar(255)
   weapons         String?         @default("None") @db.VarChar(255)
   tools           String?         @default("None") @db.VarChar(255)
   languages       String?         @default("None") @db.VarChar(255)
-  armors          String?         @default("None") @db.VarChar(255)
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_proficiencies_character_sheet")
 }
 
@@ -123,7 +128,7 @@ model skills {
 
 model stats {
   character_id    Int
-  name            Int
+  name            stats_name
   score           Int?
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_stats_character_sheet")
 
@@ -153,6 +158,27 @@ model notes {
 
   @@id([card_id, user_id])
   @@index([user_id], map: "FK_notes_user")
+}
+
+model character_actions {
+  character_id    Int
+  actions_id      Int
+  action          action          @relation(fields: [actions_id], references: [action_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos")
+
+  @@id([character_id, actions_id])
+  @@index([actions_id], map: "FK__action")
+}
+
+model character_attacks {
+  character_id    Int             @map(" character_id")
+  attack_id       Int
+  isProficient    Boolean?
+  attack          attack          @relation(fields: [attack_id], references: [attack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__attack")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos_attacck")
+
+  @@id([character_id, attack_id])
+  @@index([attack_id], map: "FK__attack")
 }
 
 enum character_classes_class_name {
@@ -187,5 +213,14 @@ enum saving_throws_name {
   dexterity
   wisdom
   constitution
+  charisma
+}
+
+enum stats_name {
+  strength
+  dexterity
+  constitution
+  intelligence
+  wisdom
   charisma
 }
