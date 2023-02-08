@@ -56,34 +56,35 @@ model character_classes {
 }
 
 model character_sheet {
-  character_id      Int                 @id
-  owner_id          Int
-  firstname         String              @default("") @db.VarChar(50)
-  lastname          String              @default("") @db.VarChar(50)
-  sex               character_sheet_sex @default(Male)
-  race              String?             @db.VarChar(50)
-  character_icon    String?             @db.MediumText
-  proficiency       Int?
-  currentxp         Int?
-  speed             Int?
-  inspiration       Boolean?
-  spellcaster       Boolean?
-  initiative        Int?
-  armor             Int?
-  currenthp         Int?
-  maxhp             Int?
-  temphp            Int?
-  defences          String?             @default("") @db.VarChar(255)
-  conditions        String?             @default("") @db.VarChar(255)
-  character_actions character_actions[]
-  character_attacks character_attacks[]
-  character_classes character_classes[]
-  user              user                @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
-  proficiencies     proficiencies?
-  saving_throws     saving_throws[]
-  senses            senses?
-  skills            skills[]
-  stats             stats[]
+  character_id            Int                       @id
+  owner_id                Int
+  firstname               String                    @default("") @db.VarChar(50)
+  lastname                String                    @default("") @db.VarChar(50)
+  sex                     character_sheet_sex       @default(Male)
+  race                    String?                   @db.VarChar(50)
+  character_icon          String?                   @db.MediumText
+  proficiency             Int?
+  currentxp               Int?
+  speed                   Int?
+  inspiration             Boolean?
+  spellcaster             Boolean?
+  initiative              Int?
+  armor                   Int?
+  currenthp               Int?
+  maxhp                   Int?
+  temphp                  Int?
+  defences                String?                   @default("") @db.VarChar(255)
+  conditions              String?                   @default("") @db.VarChar(255)
+  character_actions       character_actions[]
+  character_attacks       character_attacks[]
+  character_classes       character_classes[]
+  user                    user                      @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
+  character_sheet_actions character_sheet_actions[]
+  proficiencies           proficiencies?
+  saving_throws           saving_throws[]
+  senses                  senses?
+  skills                  skills[]
+  stats                   stats[]
 
   @@index([owner_id], map: "owner_id")
 }
@@ -173,12 +174,82 @@ model character_actions {
 model character_attacks {
   character_id    Int             @map(" character_id")
   attack_id       Int
-  isProficient    Boolean?
+  isProficient    Boolean?        @default(false)
   attack          attack          @relation(fields: [attack_id], references: [attack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__attack")
   character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos_attacck")
 
   @@id([character_id, attack_id])
   @@index([attack_id], map: "FK__attack")
+}
+
+model c_action {
+  id                      Int                       @id
+  icon                    String?                   @db.VarChar(500)
+  name                    String?                   @db.VarChar(50)
+  subtitle                String?                   @db.VarChar(20)
+  range                   Int?
+  hit_dc                  String?                   @db.VarChar(50)
+  damage                  String?                   @db.VarChar(50)
+  notes                   String?                   @db.VarChar(50)
+  bonus                   Boolean?
+  c_attack                c_attack[]
+  c_feature               c_feature[]
+  c_spell                 c_spell[]
+  character_sheet_actions character_sheet_actions[]
+}
+
+model c_attack {
+  attack_id   Int      @id
+  attack_type String   @default("") @db.VarChar(50)
+  damage_type String   @default("") @db.VarChar(50)
+  location    String   @default("") @db.VarChar(50)
+  properties  String?  @default("") @db.VarChar(255)
+  proficient  Boolean?
+  action_id   Int      @default(0)
+  c_action    c_action @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action")
+
+  @@index([action_id], map: "FK___action")
+}
+
+model c_feature {
+  feature_id  Int                  @id
+  isLimited   Boolean              @default(false)
+  isAttack    Boolean              @default(false)
+  damage_type String               @default("") @db.VarChar(50)
+  text        String               @db.Text
+  frequency   c_feature_frequency?
+  quantity    Int?
+  action_id   Int
+  c_action    c_action             @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action_feature")
+
+  @@index([action_id], map: "FK___action_feature")
+}
+
+model c_spell {
+  spell_id     Int       @id
+  level        Int       @default(0)
+  damage_type  String    @default("0") @db.VarChar(50)
+  cast         String    @default("0") @db.VarChar(50)
+  school       String    @default("0") @db.VarChar(50)
+  casting_time String    @default("0") @db.VarChar(50)
+  components   String    @default("0") @db.VarChar(50)
+  duration     String    @default("0") @db.VarChar(50)
+  text         String    @db.Text
+  isAttack     Boolean   @default(false)
+  action_id    Int?
+  c_action     c_action? @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__spell__action")
+
+  @@index([action_id], map: "FK__spell__action")
+}
+
+model character_sheet_actions {
+  character_sheet_id Int
+  c_action_id        Int
+  c_action           c_action        @relation(fields: [c_action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__c_action")
+  character_sheet    character_sheet @relation(fields: [character_sheet_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_actions")
+
+  @@id([character_sheet_id, c_action_id])
+  @@index([c_action_id], map: "FK__c_action")
 }
 
 enum character_classes_class_name {
@@ -223,4 +294,9 @@ enum stats_name {
   intelligence
   wisdom
   charisma
+}
+
+enum c_feature_frequency {
+  Short_Rest @map("Short Rest")
+  Long_Rest  @map("Long Rest")
 }

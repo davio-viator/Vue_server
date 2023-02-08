@@ -8,6 +8,7 @@ async function getCharacter(req,res){
   // const characterDbOld = await prisma.character_sheet.findMany({
   //   where: { character_id:id }
   // })
+  test(id)
   const characterDb = await global.prisma.character_sheet.findMany({
     where:{character_id:id},
     include: {
@@ -146,13 +147,11 @@ function parseAttack(attackArray, character) {
     let damage
     if(element.isProficient){
       const score = getStatBonus(character.stats,'strength');
-      console.log(getStatBonus(character.stats,'strength'));
       damage = `${element.attack.damage}+${score}`;
     }
     else {
       damage = element.attack.damage
     }
-    console.log(damage);
     const attack = {
       icon:element.attack.attack_icon,
       name:element.attack.name,
@@ -182,6 +181,90 @@ function getStatBonus(stats,name){
     if(elem.name === name) score = elem.score
   })
   return Math.floor((score-10)/2)
+}
+
+async function test(id){
+  const response = await global.prisma.character_sheet.findMany({
+    where: { character_id:id },
+    include: {
+      character_sheet_actions: {
+        select: {
+          c_action: {
+            include:{
+              c_attack:true, c_feature:true, c_spell:true
+            }
+          }
+        },
+      }
+    }
+  })
+  try {
+    const actions = response[0]
+    const actionArray = []
+    Object.keys(actions).forEach(elem => {
+      if(elem == 'character_sheet_actions'){
+        handleActions(actions[elem],actionArray);
+      }
+    })
+    console.log(actionArray);
+  } catch (error) {
+    
+  }
+}
+
+function handleActions(actions,actionArray){
+  actions.forEach(item => {
+    const attacks = item.c_action['c_attack']
+    const features = item.c_action['c_feature']
+    const spells = item.c_action['c_spell']
+    const c_action = item.c_action
+    const action = {
+      icon:c_action.icon,
+      name:c_action.name,
+      subtitle:c_action.subtitle,
+      range:c_action.range,
+      hit_dc:c_action.hit_dc,
+      damage:c_action.damage,
+      notes:c_action.notes,
+      bonus:c_action.bonus
+    }
+
+    if(features.length > 0) {
+      handleFeatures(features,action)
+    }
+    if(attacks.length > 0) {
+      handleAttack(attacks,action)
+    }
+    if(spells.length > 0) {
+      handleSpells(spells,action)
+    }
+
+    actionArray.push(action)
+
+  })
+}
+
+function handleAttack(actionArray,attackToHandle){
+  actionArray.forEach(elem => {
+    attackToHandle.isAttack = true
+    attackToHandle.attack_type = elem.attack_type
+    attackToHandle.location = elem.location;
+    attackToHandle.properties = elem.properties
+    attackToHandle.proficient = elem.proficient
+  })
+}
+function handleFeatures(actionArray,FeatureToHandle){
+  actionArray.forEach(elem => {
+    FeatureToHandle.isFeature = true
+    FeatureToHandle.isAttack = elem.isAttack
+    FeatureToHandle.damage_type = elem.damage_type
+    FeatureToHandle.text = elem.text
+    FeatureToHandle.frequency = elem.frequency
+    FeatureToHandle.quantity = elem.quantity 
+  })
+}
+function handleSpells(actionArray,SpellToHandle){
+
 }
 
 module.exports = {
