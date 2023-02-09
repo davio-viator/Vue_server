@@ -8,7 +8,8 @@ async function getCharacter(req,res){
   // const characterDbOld = await prisma.character_sheet.findMany({
   //   where: { character_id:id }
   // })
-  test(id)
+  // test(id)
+  getCharacterSheet(id)
   const characterDb = await global.prisma.character_sheet.findMany({
     where:{character_id:id},
     include: {
@@ -265,6 +266,93 @@ function handleFeatures(actionArray,FeatureToHandle){
 }
 function handleSpells(actionArray,SpellToHandle){
 
+}
+
+async function getCharacterSheet(id,res,req){
+  const response = await global.prisma.character_sheet.findMany({
+    where : {character_id:id},
+    include :  {
+      character_classes: {
+        select: { class_name:true, level:true, subclass:true }
+      },
+      saving_throws:{
+        select: { name:true, mod:true, proficient:true }
+      },
+      senses:{
+        select: { perception:true, investigation:true, insight:true }
+      },
+      proficiencies : {
+        select: { armors:true, weapons:true, tools:true, languages: true }
+      },
+      skills : {
+        select : { name: true, proficient: true, modifier: true, bonus:true }
+      },
+      stats : {
+        select : { name:true, score:true }
+      },
+      character_sheet_custom_action:{
+        select : { action_custom:true }
+      }
+    },
+  })
+  try {
+    const character_sheet = response[0];
+    // console.log(character_sheet);
+    handleCharacterActions(character_sheet)
+    handleCharacterSpells(character_sheet)
+    return character_sheet
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({message:"Couldn't retrieve the character sheet"})
+  }
+}
+
+function handleCharacterActions(character_sheet){
+  const unparsedActions = character_sheet.character_sheet_custom_action;
+  // console.log(unparsedActions);
+  const actions = {}
+  actions.attacks = []
+  actions.action = []
+  unparsedActions.forEach(item => {
+    const action = item.action_custom
+    if(action.isAttack) actions.attacks.push(action)
+    if(action.isFeature) actions.action.push(action)
+  })
+  // console.log(actions);
+}
+
+function handleCharacterSpells(character_sheet){
+  const unparsedSpells = character_sheet.character_sheet_custom_action;
+  const spells = {};
+  unparsedSpells.forEach(item => {
+    const spell = item.action_custom
+    // console.log(spell.isSpell);
+    if(spell.isSpell){
+      const level = getSpellLevel(spell.level);
+      const levelExist  = spells[level]
+      if(!levelExist){
+        spells[level] = {slots:0,used:0,spells:[]}
+      }
+      spells[level].spells.push(spell)
+      console.log({spells:spells[level].spells});
+    }
+  })
+}
+
+function getSpellLevel(level){
+  levelArray = [
+      "Cantrip",
+    "1st Level",
+    "2nd Level",
+    "3rd Level",
+    "4th Level",
+    "5th Level",
+    "6th Level",
+    "7th Level",
+    "8th Level",
+    "9th Level",
+  ]
+  return levelArray[level]
 }
 
 module.exports = {

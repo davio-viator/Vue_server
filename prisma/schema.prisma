@@ -56,35 +56,36 @@ model character_classes {
 }
 
 model character_sheet {
-  character_id            Int                       @id
-  owner_id                Int
-  firstname               String                    @default("") @db.VarChar(50)
-  lastname                String                    @default("") @db.VarChar(50)
-  sex                     character_sheet_sex       @default(Male)
-  race                    String?                   @db.VarChar(50)
-  character_icon          String?                   @db.MediumText
-  proficiency             Int?
-  currentxp               Int?
-  speed                   Int?
-  inspiration             Boolean?
-  spellcaster             Boolean?
-  initiative              Int?
-  armor                   Int?
-  currenthp               Int?
-  maxhp                   Int?
-  temphp                  Int?
-  defences                String?                   @default("") @db.VarChar(255)
-  conditions              String?                   @default("") @db.VarChar(255)
-  character_actions       character_actions[]
-  character_attacks       character_attacks[]
-  character_classes       character_classes[]
-  user                    user                      @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
-  character_sheet_actions character_sheet_actions[]
-  proficiencies           proficiencies?
-  saving_throws           saving_throws[]
-  senses                  senses?
-  skills                  skills[]
-  stats                   stats[]
+  character_id                  Int                             @id
+  owner_id                      Int
+  firstname                     String                          @default("") @db.VarChar(50)
+  lastname                      String                          @default("") @db.VarChar(50)
+  sex                           character_sheet_sex             @default(Male)
+  race                          String?                         @db.VarChar(50)
+  character_icon                String?                         @db.MediumText
+  proficiency                   Int?
+  currentxp                     Int?
+  speed                         Int?
+  inspiration                   Boolean?
+  spellcaster                   Boolean?
+  initiative                    Int?
+  armor                         Int?
+  currenthp                     Int?
+  maxhp                         Int?
+  temphp                        Int?
+  defences                      String?                         @default("") @db.VarChar(255)
+  conditions                    String?                         @default("") @db.VarChar(255)
+  character_actions             character_actions[]
+  character_attacks             character_attacks[]
+  character_classes             character_classes[]
+  user                          user                            @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
+  character_sheet_actions       character_sheet_actions[]
+  character_sheet_custom_action character_sheet_custom_action[]
+  proficiencies                 proficiencies?
+  saving_throws                 saving_throws[]
+  senses                        senses?
+  skills                        skills[]
+  stats                         stats[]
 
   @@index([owner_id], map: "owner_id")
 }
@@ -192,9 +193,9 @@ model c_action {
   damage                  String?                   @db.VarChar(50)
   notes                   String?                   @db.VarChar(50)
   bonus                   Boolean?
-  c_attack                c_attack[]
-  c_feature               c_feature[]
-  c_spell                 c_spell[]
+  c_attack                c_attack?
+  c_feature               c_feature?
+  c_spell                 c_spell?
   character_sheet_actions character_sheet_actions[]
 }
 
@@ -205,10 +206,8 @@ model c_attack {
   location    String   @default("") @db.VarChar(50)
   properties  String?  @default("") @db.VarChar(255)
   proficient  Boolean?
-  action_id   Int      @default(0)
+  action_id   Int      @unique(map: "action_id") @default(0)
   c_action    c_action @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action")
-
-  @@index([action_id], map: "FK___action")
 }
 
 model c_feature {
@@ -219,10 +218,8 @@ model c_feature {
   text        String               @db.Text
   frequency   c_feature_frequency?
   quantity    Int?
-  action_id   Int
+  action_id   Int                  @unique(map: "action_id")
   c_action    c_action             @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action_feature")
-
-  @@index([action_id], map: "FK___action_feature")
 }
 
 model c_spell {
@@ -236,10 +233,8 @@ model c_spell {
   duration     String    @default("0") @db.VarChar(50)
   text         String    @db.Text
   isAttack     Boolean   @default(false)
-  action_id    Int?
+  action_id    Int?      @unique(map: "action_id")
   c_action     c_action? @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__spell__action")
-
-  @@index([action_id], map: "FK__spell__action")
 }
 
 model character_sheet_actions {
@@ -250,6 +245,44 @@ model character_sheet_actions {
 
   @@id([character_sheet_id, c_action_id])
   @@index([c_action_id], map: "FK__c_action")
+}
+
+model action_custom {
+  id                            Int                             @id @default(autoincrement())
+  name                          String?                         @unique(map: "name") @db.VarChar(50)
+  icon                          String?                         @db.VarChar(50)
+  subtitle                      String?                         @db.VarChar(50)
+  range                         Int?
+  hit_dc                        String?                         @db.VarChar(50)
+  damage                        String?                         @db.VarChar(50)
+  notes                         String?                         @db.VarChar(255)
+  bonus                         Boolean?
+  isAttack                      Boolean?
+  isFeature                     Boolean?
+  isLimited                     Boolean?
+  isSpell                       Boolean?
+  attack_type                   String?                         @db.VarChar(50)
+  damage_type                   String?                         @db.VarChar(50)
+  location                      String?                         @db.VarChar(50)
+  properties                    String?                         @db.VarChar(50)
+  text                          String?                         @db.Text
+  frequency                     action_custom_frequency?
+  level                         Int?
+  school                        String?                         @db.VarChar(50)
+  castingTime                   String?                         @db.VarChar(50)
+  components                    String?                         @db.VarChar(50)
+  duration                      String?                         @db.VarChar(50)
+  character_sheet_custom_action character_sheet_custom_action[]
+}
+
+model character_sheet_custom_action {
+  character_id    Int
+  action_id       Int
+  action_custom   action_custom   @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action_custom")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheetz'-tyzsr'yu")
+
+  @@id([character_id, action_id])
+  @@index([action_id], map: "FK__action_custom")
 }
 
 enum character_classes_class_name {
@@ -299,4 +332,10 @@ enum stats_name {
 enum c_feature_frequency {
   Short_Rest @map("Short Rest")
   Long_Rest  @map("Long Rest")
+}
+
+enum action_custom_frequency {
+  Short_Rest       @map("Short Rest")
+  Long_Rest        @map("Long Rest")
+  EMPTY_ENUM_VALUE @map("")
 }
