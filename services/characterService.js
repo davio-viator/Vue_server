@@ -9,7 +9,12 @@ async function getCharacter(req,res){
   //   where: { character_id:id }
   // })
   // test(id)
-  getCharacterSheet(id)
+  const character = getCharacterSheet(id);
+  try {
+    
+  } catch (error) {
+    
+  }
   const characterDb = await global.prisma.character_sheet.findMany({
     where:{character_id:id},
     include: {
@@ -268,9 +273,10 @@ function handleSpells(actionArray,SpellToHandle){
 
 }
 
-async function getCharacterSheet(id,res,req){
+async function getCharacterSheet(req,res){
+  const  {character_id} = parseInt(req.params)
   const response = await global.prisma.character_sheet.findMany({
-    where : {character_id:id},
+    where : {character_id:character_id},
     include :  {
       character_classes: {
         select: { class_name:true, level:true, subclass:true }
@@ -297,14 +303,26 @@ async function getCharacterSheet(id,res,req){
   })
   try {
     const character_sheet = response[0];
+    handleCharacterSheet(character_sheet);
     // console.log(character_sheet);
-    handleCharacterActions(character_sheet)
-    handleCharacterSpells(character_sheet)
-    return character_sheet
+    return res.status(200).json({character:character_sheet})
+    // return character_sheet
   } catch (error) {
     console.log(error);
     res.status(400).json({message:"Couldn't retrieve the character sheet"})
   }
+}
+
+function handleCharacterSheet(character_sheet) {
+  handleStatsBonus(character_sheet);
+  handleProficiencies(character_sheet);
+  handleCharacterActions(character_sheet);
+  handleCharacterSpells(character_sheet);
+  handleHealth(character_sheet);
+  handleStatus(character_sheet);
+  handleClasses(character_sheet);
+  handleSavingThrows(character_sheet);
+  handleSenses(character_sheet);
 }
 
 function handleCharacterActions(character_sheet){
@@ -315,10 +333,44 @@ function handleCharacterActions(character_sheet){
   actions.action = []
   unparsedActions.forEach(item => {
     const action = item.action_custom
-    if(action.isAttack) actions.attacks.push(action)
+    if(action.isAttack) {
+      handleWeaponProficiencies(action,character_sheet)
+      actions.attacks.push(action);
+    }
     if(action.isFeature) actions.action.push(action)
+    // console.log(action);
   })
-  // console.log(actions);
+  character_sheet.actions = actions
+}
+
+function handleWeaponProficiencies(action,character_sheet){
+  const properties = action?.properties
+  if(properties){
+    const propertiesArray = properties.split(',');
+    const weapons_proficiencies = character_sheet.proficiencies.weapons
+    let proficient = false;
+    propertiesArray.forEach(item => {
+      if(weapons_proficiencies.includes(item)){
+        handleProficiencyBonus(action,character_sheet)
+      }
+    })
+    
+    console.log({propertiesArray},weapons_proficiencies,{proficient});
+  }
+}
+
+function handleProficiencyBonus(action,character_sheet){
+  const strengthBonus = character_sheet.stats.find(el => el.name === 'strength').bonus
+  const dexterityBonus = character_sheet.stats.find(el => el.name === 'dexterity').bonus
+  const bestState = findBestStat(strengthBonus,dexterityBonus)
+  if(action.properties.includes('Finesse')){
+    action.damage += `+${bestState}`
+  }
+  else action.damage += `+${strengthBonus}`
+}
+
+function findBestStat(strength,dexterity){
+  return strength > dexterity ? strength : dexterity
 }
 
 function handleCharacterSpells(character_sheet){
@@ -326,7 +378,6 @@ function handleCharacterSpells(character_sheet){
   const spells = {};
   unparsedSpells.forEach(item => {
     const spell = item.action_custom
-    // console.log(spell.isSpell);
     if(spell.isSpell){
       const level = getSpellLevel(spell.level);
       const levelExist  = spells[level]
@@ -334,9 +385,65 @@ function handleCharacterSpells(character_sheet){
         spells[level] = {slots:0,used:0,spells:[]}
       }
       spells[level].spells.push(spell)
-      console.log({spells:spells[level].spells});
     }
   })
+  // console.log(spells);
+  character_sheet.spells = spells
+}
+
+function handleHealth(character_sheet){
+  character_sheet.health = {}
+  character_sheet.health.max = character_sheet.maxhp
+  character_sheet.health.current = character_sheet.currenthp
+  character_sheet.health.temp = character_sheet.temphp
+  delete character_sheet.maxhp
+  delete character_sheet.currenthp
+  delete character_sheet.temphp
+  // console.log(character_sheet);
+}
+
+function handleStatus(character_sheet){
+  character_sheet.defences = character_sheet.defences?.split(',')
+  character_sheet.conditions = character_sheet.conditions?.split(',')
+}
+
+function handleClasses(character_sheet){
+  const parse = parseClasses(character_sheet);
+  character_sheet.level = parse.level
+  character_sheet.class = parse.classes
+  character_sheet.classLevel = parse.classLevel
+  // console.log(character_sheet);
+
+}
+
+function handleSavingThrows(character_sheet){
+  character_sheet.savingthrows = character_sheet.saving_throws;
+  delete character_sheet.saving_throws
+  // console.log(character_sheet);
+}
+
+function handleSenses(character_sheet){
+  character_sheet.senses = Object.keys(character_sheet.senses).reduce((a,b) => {
+    const newName = 'passive_'+b;
+    a[newName] = character_sheet.senses[b];
+    return a
+  },{})
+  // console.log(character_sheet);
+}
+
+function handleStatsBonus(character_sheet){
+  character_sheet.stats.forEach(elem => {
+    elem.bonus = calculateBonus(elem.score)
+  });
+  // console.log(character_sheet);
+}
+
+function handleProficiencies(character_sheet){
+  character_sheet.proficiencies.armors = character_sheet.proficiencies.armors.split(',') 
+  character_sheet.proficiencies.weapons = character_sheet.proficiencies.weapons.split(',') 
+  character_sheet.proficiencies.tools = character_sheet.proficiencies.tools.split(',') 
+  character_sheet.proficiencies.languages = character_sheet.proficiencies.languages.split(',')
+  // console.log(character_sheet); 
 }
 
 function getSpellLevel(level){
@@ -355,6 +462,8 @@ function getSpellLevel(level){
   return levelArray[level]
 }
 
+
 module.exports = {
-  getCharacter
+  getCharacter,
+  getCharacterSheet
 }
