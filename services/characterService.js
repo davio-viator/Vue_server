@@ -1,6 +1,25 @@
 // const  { PrismaClient } = require('@prisma/client')
 
 const prisma = global.prisma
+const spellSlots = require('./spellSlots.js')
+
+
+const SpellcastingAbility = {
+  artificier:"intelligence",
+  wizard:"intelligence",
+  bard:"charisma",
+  paladin:"charisma",
+  sorcerer:"charisma",
+  warlock:"charisma",
+  cleric:"wisdom",
+  druid:"wisdom",
+  ranger:"wisdom",
+  "Eldritch Knight":"intelligence",
+  "Arcane Trickster":"intelligence",
+  "Way of the Four Elements":"wisdom",
+}
+
+
 
 async function getCharacter(req,res){
   const {character_id} = parseInt(req.params)
@@ -212,7 +231,7 @@ async function test(id){
         handleActions(actions[elem],actionArray);
       }
     })
-    console.log(actionArray);
+    // console.log(actionArray);
   } catch (error) {
     
   }
@@ -261,6 +280,7 @@ function handleAttack(actionArray,attackToHandle){
 }
 function handleFeatures(actionArray,FeatureToHandle){
   actionArray.forEach(elem => {
+    // console.log(elem.damage);
     FeatureToHandle.isFeature = true
     FeatureToHandle.isAttack = elem.isAttack
     FeatureToHandle.damage_type = elem.damage_type
@@ -270,7 +290,6 @@ function handleFeatures(actionArray,FeatureToHandle){
   })
 }
 function handleSpells(actionArray,SpellToHandle){
-
 }
 
 async function getCharacterSheet(req,res){
@@ -280,7 +299,7 @@ async function getCharacterSheet(req,res){
     where : {character_id:character_id},
     include :  {
       character_classes: {
-        select: { class_name:true, level:true, subclass:true }
+        select: { class_name:true, level:true, subclass:true, spellcaster:true }
       },
       saving_throws:{
         select: { name:true, mod:true, proficient:true }
@@ -305,7 +324,7 @@ async function getCharacterSheet(req,res){
   try {
     const character_sheet = response[0];
     handleCharacterSheet(character_sheet);
-    // console.log(character_sheet);
+    // console.log(character_sheet.actions.attacks);
     return res.status(200).json({character:character_sheet})
     // return character_sheet
   } catch (error) {
@@ -316,14 +335,55 @@ async function getCharacterSheet(req,res){
 
 function handleCharacterSheet(character_sheet) {
   handleStatsBonus(character_sheet);
-  handleProficiencies(character_sheet);
+  handleClasses(character_sheet);
+  calculateSpellDc(character_sheet);
   handleCharacterActions(character_sheet);
   handleCharacterSpells(character_sheet);
+  handleProficiencies(character_sheet);
   handleHealth(character_sheet);
   handleStatus(character_sheet);
-  handleClasses(character_sheet);
   handleSavingThrows(character_sheet);
   handleSenses(character_sheet);
+}
+
+function calculateSpellDc(character_sheet){ 
+  const classes = character_sheet.character_classes
+  let spellAbility = ""
+  classLevel = 0
+  classes.forEach(elem => {
+    if(classLevel < elem.level){
+      spellAbility = SpellcastingAbility[elem.class_name]
+      if(spellAbility === undefined) spellAbility = SpellcastingAbility[elem.subclass]
+      classLevel = elem.level
+    }
+  })
+  const dc = 8 + getstat(character_sheet,spellAbility)?.bonus + character_sheet.proficiency
+  character_sheet.spellDc = dc
+}
+
+function getSpellModifier(character_sheet){
+  const classes = character_sheet.character_classes
+  let spellAbility = ""
+  let classLevel = 0
+  classes.forEach(elem => {
+    console.log({elem});
+    if(isSpellCasterClass(elem,classLevel)){
+      spellAbility = SpellcastingAbility[elem.class_name]
+      if(spellAbility === undefined) spellAbility = SpellcastingAbility[elem.subclass]
+    }
+  })
+  const modifier = getstat(character_sheet, spellAbility)?.bonus
+  return modifier
+}
+
+
+function isSpellCasterClass(elem,level=null) {
+  if(level!== null ) return elem.level < level && Object.keys(SpellcastingAbility).includes(elem.class_name)
+  return Object.keys(SpellcastingAbility).includes(elem.class_name)
+}
+
+function getstat(character_sheet, name) {
+  return character_sheet.stats.find(el => el.name === name);
 }
 
 function handleCharacterActions(character_sheet){
@@ -334,14 +394,23 @@ function handleCharacterActions(character_sheet){
   actions.action = []
   unparsedActions.forEach(item => {
     const action = item.action_custom
+    handleSpellDc(action, character_sheet);
     if(action.isAttack) {
       handleWeaponProficiencies(action,character_sheet)
+      if(action.isSpell) handleSpellProfiencies(action,character_sheet)
       actions.attacks.push(action);
     }
     if(action.isFeature) actions.action.push(action)
     // console.log(action);
   })
   character_sheet.actions = actions
+}
+
+function handleSpellDc(action, character_sheet) {
+  if (action.hit_dc !== null && !Number.isInteger(parseInt(action.hit_dc))) {
+    const dc = `${character_sheet.spellDc}|${action.hit_dc}`;
+    action.hit_dc = dc;
+  }
 }
 
 function handleWeaponProficiencies(action,character_sheet){
@@ -355,6 +424,16 @@ function handleWeaponProficiencies(action,character_sheet){
       }
     })
     
+  }
+}
+
+function handleSpellProfiencies(action,character_sheet){
+  const properties = action?.properties
+  if(properties){
+    if(properties.includes('variable')){
+      const modifier = getSpellModifier(character_sheet)
+      action.damage = `${action.damage}+${modifier}`
+    }
   }
 }
 
@@ -382,12 +461,36 @@ function handleCharacterSpells(character_sheet){
       const levelExist  = spells[level]
       if(!levelExist){
         spells[level] = {slots:0,used:0,spells:[]}
+        const spellsTest = handleSpellSlots(character_sheet,level)
+        console.log('----------------------------------------------');
+        // console.log({spells},{spellsTest});
       }
       spells[level].spells.push(spell)
     }
   })
   // console.log(spells);
   character_sheet.spells = spells
+}
+
+function handleSpellSlots(sheet,refLevel){
+  lvl = 5
+  const classes = sheet.character_classes
+  // console.log(classes);
+  let level = 0
+  let slotsAvailable;
+  const spells = {}
+  for(item in classes){
+    const cclass = classes[item] 
+    if(isSpellCasterClass(cclass) && level < cclass.level){
+      console.log({sheet});
+      level = cclass.level
+      const slotsAvailable = spellSlots.cleric[level]
+      console.log(slotsAvailable);
+      spells[cclass.level] = {slots:slotsAvailable[cclass.level],used:0,spells:[]}
+    }
+  }
+  // console.log({spellSlots},{level},{slotsAvailable});
+  console.log({spells});
 }
 
 function handleHealth(character_sheet){

@@ -50,6 +50,7 @@ model character_classes {
   class_name      character_classes_class_name
   subclass        String?                      @db.VarChar(50)
   level           Int?
+  spellcaster     Boolean?
   character_sheet character_sheet              @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_classes_character_sheet")
 
   @@id([character_id, class_name])
@@ -266,6 +267,7 @@ model action_custom {
   location                      String?                         @db.VarChar(50)
   properties                    String?                         @db.VarChar(50)
   text                          String?                         @db.Text
+  description                   String?                         @db.Text
   frequency                     action_custom_frequency?
   quantity                      Int?
   level                         Int?
