@@ -274,7 +274,8 @@ function handleSpells(actionArray,SpellToHandle){
 }
 
 async function getCharacterSheet(req,res){
-  const  {character_id} = parseInt(req.params)
+  let  {character_id} = req.params;
+  character_id = parseInt(character_id);
   const response = await global.prisma.character_sheet.findMany({
     where : {character_id:character_id},
     include :  {
@@ -348,14 +349,12 @@ function handleWeaponProficiencies(action,character_sheet){
   if(properties){
     const propertiesArray = properties.split(',');
     const weapons_proficiencies = character_sheet.proficiencies.weapons
-    let proficient = false;
     propertiesArray.forEach(item => {
       if(weapons_proficiencies.includes(item)){
         handleProficiencyBonus(action,character_sheet)
       }
     })
     
-    console.log({propertiesArray},weapons_proficiencies,{proficient});
   }
 }
 
