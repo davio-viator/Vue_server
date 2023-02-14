@@ -1,6 +1,5 @@
 // const  { PrismaClient } = require('@prisma/client')
 
-const prisma = global.prisma
 const spellSlots = require('./spellSlots.js')
 
 
@@ -21,113 +20,6 @@ const SpellcastingAbility = {
 
 
 
-async function getCharacter(req,res){
-  const {character_id} = parseInt(req.params)
-  const id = parseInt(req.params['character_id'])
-  // const characterDbOld = await prisma.character_sheet.findMany({
-  //   where: { character_id:id }
-  // })
-  // test(id)
-  const character = getCharacterSheet(id);
-  try {
-    
-  } catch (error) {
-    
-  }
-  const characterDb = await global.prisma.character_sheet.findMany({
-    where:{character_id:id},
-    include: {
-        character_classes: {
-          select: { class_name:true, level:true, subclass:true }
-        },
-        saving_throws:{
-          select: {name:true, mod:true, proficient:true}
-        },
-        senses:{
-          select: {perception:true, investigation:true, insight:true}
-        },
-        proficiencies : {
-          select: {armors:true, weapons:true, tools:true, languages: true}
-        },
-        skills : {
-          select : {name: true, proficient: true, modifier: true, bonus:true}
-        },
-        stats : {
-          select : {name:true, score:true}
-        },
-        character_actions : {
-          select : {
-            action : {
-              select : { title:true, text:true, times: true, frequency:true, bonus: true }
-            }
-          }
-        },
-        character_attacks : {
-          select : {
-            isProficient:true,
-            attack : {
-              select: {
-                name:true, 
-                attack_icon:true, 
-                attack_type:true, 
-                range:true, 
-                range_type:true, 
-                hit_dc:true, 
-                damage:true, 
-                damage_icon:true, 
-                bonus:true, 
-                notes:true,
-                isSpell:true
-              }
-            }
-          }
-        }
-    },
-  })
-  try {
-    const character = characterDb[0]
-    character.health = {}
-    character.health.max = character.maxhp
-    character.health.current = character.currenthp
-    character.health.temp = character.temphp
-    character.defences = character.defences?.split(',')
-    character.conditions = character.conditions?.split(',')
-    const parse = parseClasses(character)
-    character.level = parse.level
-    character.class = parse.classes
-    character.classLevel = parse.classLevel
-    character.savingthrows = character.saving_throws;
-    character.senses = Object.keys(character.senses).reduce((a,b) => {
-      const newName = 'passive_'+b;
-      a[newName] = character.senses[b];
-      return a
-    },{})
-    character.stats.forEach(elem => {
-      elem.bonus = calculateBonus(elem.score)
-    })
-    character.proficiencies.armors = character.proficiencies.armors.split(',') 
-    character.proficiencies.weapons = character.proficiencies.weapons.split(',') 
-    character.proficiencies.tools = character.proficiencies.tools.split(',') 
-    character.proficiencies.languages = character.proficiencies.languages.split(',') 
-    character.actions = {}
-    character.actions.action = parseActions(character.character_actions)
-    character.actions.attacks = parseAttack(character.character_attacks,character)
-    delete character.maxhp
-    delete character.currenthp
-    delete character.temphp
-    delete character.character_classes
-    delete character.saving_throws
-    delete character.character_actions
-    delete character.character_attacks
-    // console.log(character);
-    return res.status(200).json({character:character})
-  } catch (error) {
-    console.log(error);
-    return res.status(400).json({
-      message:"Couldn't retrive the character"
-    })
-  }
-} 
 
 function parseClasses(value){
     const classValue = value.character_classes
@@ -151,145 +43,8 @@ function parseClasses(value){
     return character
 }
 
-function parseActions(actionArray){
-  returnArray = []
-  actionArray.forEach(element => {
-    const action = {
-      title:element.action.title,
-      text:element.action.text,
-      times:element.action.times,
-      frequency:element.action.frequency,
-      bonus:element.action.bonus
-    }
-    returnArray.push(action)
-  });
-  return returnArray
-}
-
-function parseAttack(attackArray, character) {
-  returnArray = []
-  attackArray.forEach(element => {
-    let damage
-    if(element.isProficient){
-      const score = getStatBonus(character.stats,'strength');
-      damage = `${element.attack.damage}+${score}`;
-    }
-    else {
-      damage = element.attack.damage
-    }
-    const attack = {
-      icon:element.attack.attack_icon,
-      name:element.attack.name,
-      attack_type:element.attack.attack_type,
-      range:element.attack.range,
-      range_type:element.attack.range_type,
-      hit_dc:element.attack.hit_dc,
-      damage:damage,
-      damage_icon:element.attack.damage_icon,
-      notes:element.attack.notes,
-      bonus:element.attack.bonus,
-      isProficient:element.isProficient,
-      isSpell:element.attack.isSpell
-    }
-    returnArray.push(attack)
-  })
-  return returnArray
-}
-
 function calculateBonus(score){
   return Math.floor((score-10)/2)
-}
-
-function getStatBonus(stats,name){
-  let score
-  stats.forEach(elem => {
-    if(elem.name === name) score = elem.score
-  })
-  return Math.floor((score-10)/2)
-}
-
-async function test(id){
-  const response = await global.prisma.character_sheet.findMany({
-    where: { character_id:id },
-    include: {
-      character_sheet_actions: {
-        select: {
-          c_action: {
-            include:{
-              c_attack:true, c_feature:true, c_spell:true
-            }
-          }
-        },
-      }
-    }
-  })
-  try {
-    const actions = response[0]
-    const actionArray = []
-    Object.keys(actions).forEach(elem => {
-      if(elem == 'character_sheet_actions'){
-        handleActions(actions[elem],actionArray);
-      }
-    })
-    // console.log(actionArray);
-  } catch (error) {
-    
-  }
-}
-
-function handleActions(actions,actionArray){
-  actions.forEach(item => {
-    const attacks = item.c_action['c_attack']
-    const features = item.c_action['c_feature']
-    const spells = item.c_action['c_spell']
-    const c_action = item.c_action
-    const action = {
-      icon:c_action.icon,
-      name:c_action.name,
-      subtitle:c_action.subtitle,
-      range:c_action.range,
-      hit_dc:c_action.hit_dc,
-      damage:c_action.damage,
-      notes:c_action.notes,
-      bonus:c_action.bonus
-    }
-
-    if(features.length > 0) {
-      handleFeatures(features,action)
-    }
-    if(attacks.length > 0) {
-      handleAttack(attacks,action)
-    }
-    if(spells.length > 0) {
-      handleSpells(spells,action)
-    }
-
-    actionArray.push(action)
-
-  })
-}
-
-function handleAttack(actionArray,attackToHandle){
-  actionArray.forEach(elem => {
-    attackToHandle.isAttack = true
-    attackToHandle.attack_type = elem.attack_type
-    attackToHandle.location = elem.location;
-    attackToHandle.properties = elem.properties
-    attackToHandle.proficient = elem.proficient
-  })
-}
-function handleFeatures(actionArray,FeatureToHandle){
-  actionArray.forEach(elem => {
-    // console.log(elem.damage);
-    FeatureToHandle.isFeature = true
-    FeatureToHandle.isAttack = elem.isAttack
-    FeatureToHandle.damage_type = elem.damage_type
-    FeatureToHandle.text = elem.text
-    FeatureToHandle.frequency = elem.frequency
-    FeatureToHandle.quantity = elem.quantity 
-  })
-}
-function handleSpells(actionArray,SpellToHandle){
 }
 
 async function getCharacterSheet(req,res){
@@ -299,7 +54,7 @@ async function getCharacterSheet(req,res){
     where : {character_id:character_id},
     include :  {
       character_classes: {
-        select: { class_name:true, level:true, subclass:true, spellcaster:true }
+        select: { class_name:true, level:true, subclass:true }
       },
       saving_throws:{
         select: { name:true, mod:true, proficient:true }
@@ -323,10 +78,9 @@ async function getCharacterSheet(req,res){
   })
   try {
     const character_sheet = response[0];
+    await getInventory(character_sheet)
     handleCharacterSheet(character_sheet);
-    // console.log(character_sheet.actions.attacks);
     return res.status(200).json({character:character_sheet})
-    // return character_sheet
   } catch (error) {
     console.log(error);
     res.status(400).json({message:"Couldn't retrieve the character sheet"})
@@ -366,10 +120,10 @@ function getSpellModifier(character_sheet){
   let spellAbility = ""
   let classLevel = 0
   classes.forEach(elem => {
-    console.log({elem});
     if(isSpellCasterClass(elem,classLevel)){
       spellAbility = SpellcastingAbility[elem.class_name]
       if(spellAbility === undefined) spellAbility = SpellcastingAbility[elem.subclass]
+      classLevel = elem.level
     }
   })
   const modifier = getstat(character_sheet, spellAbility)?.bonus
@@ -378,7 +132,7 @@ function getSpellModifier(character_sheet){
 
 
 function isSpellCasterClass(elem,level=null) {
-  if(level!== null ) return elem.level < level && Object.keys(SpellcastingAbility).includes(elem.class_name)
+  if(level!== null ) return elem.level > level && Object.keys(SpellcastingAbility).includes(elem.class_name)
   return Object.keys(SpellcastingAbility).includes(elem.class_name)
 }
 
@@ -453,44 +207,43 @@ function findBestStat(strength,dexterity){
 
 function handleCharacterSpells(character_sheet){
   const unparsedSpells = character_sheet.character_sheet_custom_action;
-  const spells = {};
+  // const spells = {};/
+  const spells = handleSpellSlots(character_sheet);
   unparsedSpells.forEach(item => {
     const spell = item.action_custom
     if(spell.isSpell){
       const level = getSpellLevel(spell.level);
-      const levelExist  = spells[level]
-      if(!levelExist){
-        spells[level] = {slots:0,used:0,spells:[]}
-        const spellsTest = handleSpellSlots(character_sheet,level)
-        console.log('----------------------------------------------');
-        // console.log({spells},{spellsTest});
-      }
       spells[level].spells.push(spell)
     }
   })
-  // console.log(spells);
   character_sheet.spells = spells
 }
 
-function handleSpellSlots(sheet,refLevel){
-  lvl = 5
+function handleSpellSlots(sheet){
   const classes = sheet.character_classes
-  // console.log(classes);
   let level = 0
-  let slotsAvailable;
-  const spells = {}
+  const returnSlots = {}
+  returnSlots.Cantrip = {slots:-1,used:-1,spells:[]}
   for(item in classes){
     const cclass = classes[item] 
-    if(isSpellCasterClass(cclass) && level < cclass.level){
-      console.log({sheet});
+    if(isSpellCasterClass(cclass,level)){
+      const classLevel = cclass.level.toString();
+      const className = cclass.class_name
+      const slotsAvailable = spellSlots[className][classLevel]
       level = cclass.level
-      const slotsAvailable = spellSlots.cleric[level]
-      console.log(slotsAvailable);
-      spells[cclass.level] = {slots:slotsAvailable[cclass.level],used:0,spells:[]}
+      Object.keys(slotsAvailable).forEach(elem => {
+        returnSlots[elem] = {slots:slotsAvailable[elem],used:0,spells:[]}
+      })
     }
   }
-  // console.log({spellSlots},{level},{slotsAvailable});
-  console.log({spells});
+  return returnSlots
+}
+
+function testParams(){
+  for (let i = 0; i < arguments.length; i++) {
+    const element = arguments[i];
+    console.log(element);
+  }
 }
 
 function handleHealth(character_sheet){
@@ -501,7 +254,6 @@ function handleHealth(character_sheet){
   delete character_sheet.maxhp
   delete character_sheet.currenthp
   delete character_sheet.temphp
-  // console.log(character_sheet);
 }
 
 function handleStatus(character_sheet){
@@ -514,14 +266,12 @@ function handleClasses(character_sheet){
   character_sheet.level = parse.level
   character_sheet.class = parse.classes
   character_sheet.classLevel = parse.classLevel
-  // console.log(character_sheet);
 
 }
 
 function handleSavingThrows(character_sheet){
   character_sheet.savingthrows = character_sheet.saving_throws;
   delete character_sheet.saving_throws
-  // console.log(character_sheet);
 }
 
 function handleSenses(character_sheet){
@@ -564,8 +314,80 @@ function getSpellLevel(level){
   return levelArray[level]
 }
 
+async function getInventory(character_sheet){
+  const response = await global.prisma.character_sheet.findUnique({
+    where : {character_id:character_sheet.character_id},
+    include : {
+      character_inventory: {
+        select : { 
+          item: true ,equipped:true ,location:true, quantity:true
+        }
+      },
+    }
+  })
+
+  try {
+    // console.log(response);
+    const inventory = response.character_inventory
+    // console.log(inventory);
+    const equipement = []
+    const backpack = []
+    for(i in inventory){
+      const item = inventory[i]
+      // console.table(item);
+      // console.log(item.location);
+      if(item.location === "Backpack"){
+        if(!item.item.equipable) item.item.active = -1
+        else if(item.equipped) item.item.active = 1
+        else if(!item.equipped) item.item.active = 0
+        delete item.equipped
+        delete item.location
+        delete item.item.item_id
+        backpack.push(item.item)
+      }
+      if(item.location === "Equipment"){
+        console.log(item);
+        if(!item.item.equipable) item.item.active = -1
+        else if(item.equipped) item.item.active = 1
+        else if(!item.equipped) item.item.active = 0
+        delete item.equipped
+        delete item.location
+        delete item.item.item_id
+        equipement.push(item.item)
+        console.log(item);
+      }      
+    }
+    // console.table({equipement});
+    // console.table({backpack});
+    character_sheet.inventory = {
+      copper:1,
+      silver:2,
+      electrum:3,
+      gold:12,
+      platinum:4,
+      hasBackpack:true,
+      hasAlmsBox:true,
+      equipment: [],
+      almsBox:[],
+      backpack:[]
+      
+    }
+    equipement.forEach(elem => {
+      // console.log(elem);
+    })
+    backpack.forEach(elem => {
+      // console.log(elem);
+    })
+    console.log(equipement);
+    if(backpack.length>0) character_sheet.inventory.backpack = backpack
+    character_sheet.inventory.equipment = equipement
+    // character_sheet.inventory.backpack = backpack
+  } catch (error) {
+    
+  }
+}
+
 
 module.exports = {
-  getCharacter,
   getCharacterSheet
 }

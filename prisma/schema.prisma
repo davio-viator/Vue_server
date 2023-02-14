@@ -50,7 +50,6 @@ model character_classes {
   class_name      character_classes_class_name
   subclass        String?                      @db.VarChar(50)
   level           Int?
-  spellcaster     Boolean?
   character_sheet character_sheet              @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_classes_character_sheet")
 
   @@id([character_id, class_name])
@@ -79,6 +78,7 @@ model character_sheet {
   character_actions             character_actions[]
   character_attacks             character_attacks[]
   character_classes             character_classes[]
+  character_inventory           character_inventory[]
   user                          user                            @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_id")
   character_sheet_actions       character_sheet_actions[]
   character_sheet_custom_action character_sheet_custom_action[]
@@ -288,6 +288,32 @@ model character_sheet_custom_action {
   @@index([action_id], map: "FK__action_custom")
 }
 
+model character_inventory {
+  character_id    Int
+  item_id         Int
+  equipped        Boolean?
+  location        character_inventory_location?
+  quantity        Int?                          @default(1)
+  character_sheet character_sheet               @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_character_sheet")
+  item            item                          @relation(fields: [item_id], references: [item_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_item")
+
+  @@id([character_id, item_id])
+  @@index([item_id], map: "FK_character_inventory_item")
+}
+
+model item {
+  item_id             Int                   @id @default(autoincrement())
+  name                String?               @db.VarChar(50)
+  subname             String?               @db.VarChar(50)
+  weight              Float?                @db.Float
+  cost                Float?                @db.Float
+  notes               String?               @db.VarChar(255)
+  description         String?               @db.Text
+  equipable           Boolean?
+  properties          String?               @db.VarChar(50)
+  character_inventory character_inventory[]
+}
+
 enum character_classes_class_name {
   barbarian
   bard
@@ -341,4 +367,11 @@ enum action_custom_frequency {
   Short_Rest       @map("Short Rest")
   Long_Rest        @map("Long Rest")
   EMPTY_ENUM_VALUE @map("")
+}
+
+enum character_inventory_location {
+  Equipment
+  Backpack
+  Attunement
+  Alsm_Box   @map("Alsm Box")
 }
