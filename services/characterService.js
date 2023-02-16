@@ -1,7 +1,5 @@
-// const  { PrismaClient } = require('@prisma/client')
-
 const spellSlots = require('./spellSlots.js')
-
+const axios = require('axios')
 
 const SpellcastingAbility = {
   artificier:"intelligence",
@@ -194,11 +192,21 @@ function handleSpellProfiencies(action,character_sheet){
 function handleProficiencyBonus(action,character_sheet){
   const strengthBonus = character_sheet.stats.find(el => el.name === 'strength').bonus
   const dexterityBonus = character_sheet.stats.find(el => el.name === 'dexterity').bonus
-  const bestState = findBestStat(strengthBonus,dexterityBonus)
+  const bestStat = findBestStat(strengthBonus,dexterityBonus)
   if(action.properties.includes('Finesse')){
-    action.damage += `+${bestState}`
+    action.damage += `+${bestStat}`
+    handleToHit(action,character_sheet,bestStat)
   }
-  else action.damage += `+${strengthBonus}`
+  else {
+    action.damage += `+${strengthBonus}`
+    handleToHit(action,character_sheet,strengthBonus)
+  }
+}
+
+function handleToHit(action,character_sheet,stat){
+  if(action.attack_type === "melee weapon"){
+    action.hit_dc = character_sheet.proficiency + stat
+  }
 }
 
 function findBestStat(strength,dexterity){
@@ -213,7 +221,8 @@ function handleCharacterSpells(character_sheet){
     const spell = item.action_custom
     if(spell.isSpell){
       const level = getSpellLevel(spell.level);
-      spells[level].spells.push(spell)
+      // console.log({level},{spellsLevel:spells[level]});
+      spells[level]?.spells?.push(spell)
     }
   })
   character_sheet.spells = spells
@@ -346,7 +355,7 @@ async function getInventory(character_sheet){
         backpack.push(item.item)
       }
       if(item.location === "Equipment"){
-        console.log(item);
+        // console.log(item);
         if(!item.item.equipable) item.item.active = -1
         else if(item.equipped) item.item.active = 1
         else if(!item.equipped) item.item.active = 0
@@ -354,7 +363,7 @@ async function getInventory(character_sheet){
         delete item.location
         delete item.item.item_id
         equipement.push(item.item)
-        console.log(item);
+        // console.log(item);
       }      
     }
     // console.table({equipement});
@@ -365,8 +374,8 @@ async function getInventory(character_sheet){
       electrum:3,
       gold:12,
       platinum:4,
-      hasBackpack:true,
-      hasAlmsBox:true,
+      // hasBackpack:true,
+      // hasAlmsBox:true,
       equipment: [],
       almsBox:[],
       backpack:[]
@@ -378,8 +387,11 @@ async function getInventory(character_sheet){
     backpack.forEach(elem => {
       // console.log(elem);
     })
-    console.log(equipement);
-    if(backpack.length>0) character_sheet.inventory.backpack = backpack
+    // console.log(equipement);
+    if(backpack.length>0){ 
+      character_sheet.inventory.hasBackpack = true
+      character_sheet.inventory.backpack = backpack
+    }
     character_sheet.inventory.equipment = equipement
     // character_sheet.inventory.backpack = backpack
   } catch (error) {
@@ -387,7 +399,481 @@ async function getInventory(character_sheet){
   }
 }
 
+async function getEquipment(){
+  const equipment = await axios.get("https://www.dnd5eapi.co/api/equipment")
+  const categories = new Set();
+  try {
+    // console.log(equipment);
+    const indexes = []
+    equipment.data.results.forEach(elem => {
+      indexes.push(elem.index)
+    })
+    // console.log(indexes);
+    indexes.forEach(async elem => {
+      const res = await axios.get(`https://www.dnd5eapi.co/api/equipment/${elem}`)
+      try {
+        const equipment = res.data
+        const item = {};
+         item.category = equipment.equipment_category.name
+        if(item.category === "Weapon"){
+         item.name        = equipment.name
+         item.isAttack    = true;
+         item.icon        = equipment.damage.damage_type.index;
+         item.subtitle    = equipment.category_range;
+         item.range       = equipment.range.normal+", "+equipment.range?.long;
+         item.range       = item.range.replaceAll(', undefined','')
+         item.damage      = equipment.damage.damage_dice;
+         item.notes       = equipment.properties.map(elem => {
+          return elem.index;
+         }).join(',')
+         item.bonus       = false;
+         item.attack_type = "melee weapon";
+         item.damage_type = item.icon;
+         item.location    = "inventory";
+         item.properties  = item.notes;
+         delete item.category
+        //  const dbResponse = await global.prisma.action_custom.create({
+        //     data:item
+        //   })
+        //   try {
+        //     console.log(dbResponse);
+        //   } catch (error) {
+        //     console.log(error);
+        //   }
+          //  console.log(item,'\n------------------------------------------');
+        }
+
+        // console.log(categories);
+      } catch (error) {
+        console.log(error);
+      }
+    })
+    // console.log(categories);
+  } catch (error) {
+    
+  }
+}
+
+async function getArmor(){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/armor")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    // console.log(armorLinks.data);
+    const urls = armorLinks.data.equipment;
+    urls.forEach((elem,i) => {
+      // console.log(`${base}${elem.url}`);
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data?.armor_category+" Armor"
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.equipable = true;
+          item.properties = "armor "+data.properties?.join(', ')
+          item.category = "armor"
+          item.rarity = data?.rarity?.name
+          convertPrice(item, data)
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+          // if(i < 10) console.log(item,'\n--------------------------------------------------------------\n'); 
+          
+          // console.log(data,'\n--------------------------------------------------------------\n');
+        })
+        .catch(err => {
+          console.log(err);
+        })
+    });
+
+  } catch (error) {
+    console.log(error);
+  }
+
+}
+
+async function getWeapon(req,resp){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/weapon")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.equipment;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data.name,data.cost);
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data?.weapon_category+" weapon"
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.equipable = true;
+          item.properties = "weapon "+data.properties?.map(item => {
+            return item.name+", "
+          })
+          item.category = "weapon"
+          item.rarity = data?.rarity?.name
+
+          convertPrice(item, data)
+
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // console.log(data.name,data.cost,item.cost);
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+        })
+    })
+  } catch (error) {
+    
+  }
+}
+
+function convertPrice(item, data) {
+  if (item.cost !== undefined) {
+    if (data.cost.unit === 'cp')
+      item.cost = item.cost / 100
+    if (data.cost.unit === 'sp')
+      item.cost = item.cost / 10
+    if (data.cost.unit === 'ep')
+      item.cost = item.cost / 2
+    if (data.cost.unit === 'pp')
+      item.cost = item.cost * 10
+  }
+}
+
+async function getMagicItem(req,res){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/magic-items")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.results;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data);
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data?.equipment_category?.name
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.properties = ""+data.equipment_category?.name
+          item.equipable = isEquipable(item)
+          item.category = data.equipment_category?.name.toLowerCase()
+          item.rarity = data?.rarity?.name
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // console.log({equipable:item.equipable},",",{properties:item.properties});
+          // console.log({item});
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+        })
+    })
+  } catch (error) {
+    
+  }
+}
+
+async function getTools(req,res){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/tools")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.equipment;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data.cost);
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data?.tool_category
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.equipable = false;
+          item.properties = "tools, "+data.properties?.map(item => {
+            return item.name+", "
+          })
+          item.category = "tool"
+          item.rarity = data?.rarity?.name
+          convertPrice(item, data)
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // console.log(item);
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+        })
+    })
+  }
+  catch(error){
+
+  }
+}
+
+async function getAdventureGear(req,res){
+  // adventuring-gear
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/adventuring-gear")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.equipment;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data);
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data.gear_category.name
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.equipable = false;
+          item.properties = ""+data.properties?.map(item => {
+            return item.name+", "
+          })
+          item.category = "adventuring gear"
+          item.rarity = data?.rarity?.name
+          convertPrice(item, data)
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // console.log(item);
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+        })
+    })
+  }
+  catch(error){
+    console.log(error);
+  }
+}
+
+async function getMounts(req,res){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/mounts-and-vehicles")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.equipment;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data);
+          const item = {}
+          item.notes = 'test'
+          item.name = data.name;
+          item.subname = data.vehicle_category
+          item.weight = data.weight;
+          item.cost = data.cost?.quantity;
+          item.description = data.desc.join('\n');
+          item.equipable = false;
+          item.properties = ""+data.properties?.map(item => {
+            return item.name+", "
+          })
+          item.category = "mounts and vehicles"
+          item.rarity = data?.rarity?.name
+          convertPrice(item, data)
+          item.subname = item.subname.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll('undefined','')
+          item.properties = item.properties.replaceAll(', ','')
+          // console.log(item);
+          // const dbResponse = await global.prisma.item.create({
+          //   data:item
+          // })
+          // try {
+          //   console.log(dbResponse);
+          // } catch (error) {
+          //   console.log(error);
+          // }
+        })
+    })
+  }
+  catch(error){
+    console.log(error);
+  }
+}
+
+async function getSpells(){
+  const armorLinks = await axios.get("https://www.dnd5eapi.co/api/spells")
+  const base = "https://www.dnd5eapi.co"
+  try {
+    const urls = armorLinks.data.results;
+    // console.log(urls);
+    urls.forEach(elem => {
+      axios.get(`${base}${elem.url}`)
+        .then(async res => {
+          const data = res.data
+          // console.log(data);
+          const spell = {};
+          spell.name = data.name;
+          spell.icon = data.school.index;
+          spell.subtitle = data.school.name;
+          spell.range = parseInt(data.range)
+          if(Number.isNaN(spell.range)) spell.range = data.range
+          spell.range = spell.range+""
+          spell.hit_dc = data?.dc?.dc_type?.index;
+          if(spell.hit_dc === undefined) spell.hit_dc = ""
+          spell.damage = data?.damage?.damage_at_slot_level;
+          spell.damage = JSON.stringify(spell?.damage)
+          spell.damage_type = data?.damage?.damage_type?.index;
+          spell.bonus = data.casting_time.includes('bonus');
+          spell.isAttack =data?.damage !== undefined
+          spell.isLimited = false;
+          spell.isSpell = true;
+          spell.attack_type = 'magic attack'
+          spell.description = ""+data.desc.join('\n')
+          spell.level = data.level;
+          spell.school = data.school.index;
+          spell.castingTime = data.casting_time
+          spell.duration = data.duration
+          spell.components = data.components?.join(',');
+          if(spell.damage !== undefined) {
+            if(spell.damage.includes('MOD'))
+            spell.properties = "variable"
+          }
+          if(spell.damage === undefined) {
+            spell.damage = JSON.stringify(data?.heal_at_slot_level)
+            if(spell.damage !== undefined) spell.damage_type = "healing"
+          }
+          spell.notes = ""
+
+
+          if(data.index === 'vicious-mockery' || data.index === 'sunbeam'){
+            // console.log(data);
+          }
+          if(spell.name === "Spirit Guardians" || spell.name === "Thunderwave"){
+            // console.log(JSON.stringify(spell?.damage));
+            // console.log({data},{spell});
+          }
+          if(spell.name === "Spiritual Weapon"){
+            // console.log(spell);
+            // console.log("\n",data);
+          }
+          let duration = ""
+          if(data.duration != "Instantaneous"){
+            duration = "D: "
+            if(data.duration.includes('minute')){
+              const time = parseInt(data.duration) 
+              if(!Number.isNaN(time)){
+                duration+=`${time}m, `
+                spell.notes = duration
+              } 
+            }
+            if(data.duration.includes('hour')){
+              const time = parseInt(data.duration) 
+              if(!Number.isNaN(time)){
+                duration+=`${time}h, `
+                spell.notes = duration
+              }
+            }
+            if(data.duration.includes('round')){
+              const time = parseInt(data.duration) 
+              if(!Number.isNaN(time)){
+                duration+=`${time}r, `
+                spell.notes = duration
+              }
+            }
+          }
+          spell.notes += spell.components
+          const dbResponse = await global.prisma.action_custom.create({
+            data:spell
+          })
+          try {
+            // console.log(dbResponse);
+          } catch (error) {
+            // console.log(spell.name);
+            console.log(error);
+          }
+        })
+    })
+  }
+  catch(error){
+    console.log(error);
+  }
+}
+
+async function getEquipmentDb(req,res){
+  const result = await global.prisma.item.findMany({
+    where :{category:"weapon"}
+  })
+  try {
+    console.log(result);
+    result.forEach(elem => {
+      const item = {};
+      console.log(elem.name);
+    })
+  } catch (error) {
+    
+  }
+}
+
+
+function isEquipable(item) {
+  return item.properties.includes('Weapon') 
+  || item.properties.includes('Armor') 
+  || item.properties.includes('Ring') 
+  || item.properties.includes('Rod') 
+  || item.properties.includes('Staff') 
+  || item.properties.includes('Wand')
+}
 
 module.exports = {
-  getCharacterSheet
+  getCharacterSheet,
+  getEquipment,
+  getArmor,
+  getWeapon,
+  getMagicItem,
+  getTools,
+  getAdventureGear,
+  getMounts,
+  getSpells,
+  getEquipmentDb
 }
+

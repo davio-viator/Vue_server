@@ -253,9 +253,9 @@ model action_custom {
   name                          String?                         @unique(map: "name") @db.VarChar(50)
   icon                          String?                         @db.VarChar(50)
   subtitle                      String?                         @db.VarChar(50)
-  range                         Int?
+  range                         String?                         @db.VarChar(50)
   hit_dc                        String?                         @db.VarChar(50)
-  damage                        String?                         @db.VarChar(50)
+  damage                        String?                         @db.VarChar(255)
   notes                         String?                         @db.VarChar(255)
   bonus                         Boolean?
   isAttack                      Boolean?
@@ -295,7 +295,7 @@ model character_inventory {
   location        character_inventory_location?
   quantity        Int?                          @default(1)
   character_sheet character_sheet               @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_character_sheet")
-  item            item                          @relation(fields: [item_id], references: [item_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_item")
+  item            item                          @relation(fields: [item_id], references: [item_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_character_inventory_item")
 
   @@id([character_id, item_id])
   @@index([item_id], map: "FK_character_inventory_item")
@@ -305,12 +305,14 @@ model item {
   item_id             Int                   @id @default(autoincrement())
   name                String?               @db.VarChar(50)
   subname             String?               @db.VarChar(50)
-  weight              Float?                @db.Float
-  cost                Float?                @db.Float
+  weight              Float?                @default(0) @db.Float
+  cost                Float?                @default(0) @db.Float
   notes               String?               @db.VarChar(255)
   description         String?               @db.Text
   equipable           Boolean?
-  properties          String?               @db.VarChar(50)
+  properties          String?               @db.Text
+  category            String?               @db.VarChar(50)
+  rarity              String?               @db.VarChar(50)
   character_inventory character_inventory[]
 }
 
