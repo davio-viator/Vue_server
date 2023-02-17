@@ -80,6 +80,13 @@ async function getCharacterSheet(req,res){
     const character_sheet = response[0];
     await getInventory(character_sheet)
     handleCharacterSheet(character_sheet);
+    // getWeaponAction
+    let req = {
+      query:{
+        name:"Greataxe"
+      }
+    }
+    addActionOfEquipedWeapons(await getWeaponAction(req),character_sheet)
     return res.status(200).json({character:character_sheet})
   } catch (error) {
     console.log(error);
@@ -142,7 +149,6 @@ function getstat(character_sheet, name) {
 
 function handleCharacterActions(character_sheet){
   const unparsedActions = character_sheet.character_sheet_custom_action;
-  // console.log(unparsedActions);
   const actions = {}
   actions.attacks = []
   actions.action = []
@@ -151,19 +157,23 @@ function handleCharacterActions(character_sheet){
     handleSpellDc(action, character_sheet);
     if(action.isAttack) {
       handleWeaponProficiencies(action,character_sheet)
-      if(action.isSpell) handleSpellProfiencies(action,character_sheet)
+      if(action.isSpell) {
+        handleSpellProfiencies(action,character_sheet)
+      }
       actions.attacks.push(action);
     }
     if(action.isFeature) actions.action.push(action)
-    // console.log(action);
   })
   character_sheet.actions = actions
 }
 
 function handleSpellDc(action, character_sheet) {
-  if (action.hit_dc !== null && !Number.isInteger(parseInt(action.hit_dc))) {
+  if (action.hit_dc !== '' && !Number.isInteger(parseInt(action.hit_dc))) {
     const dc = `${character_sheet.spellDc}|${action.hit_dc}`;
     action.hit_dc = dc;
+  }else if(action.hit_dc === ''){
+    const modifier = getSpellModifier(character_sheet)+character_sheet.proficiency
+    action.hit_dc = modifier.toString()
   }
 }
 
@@ -223,7 +233,6 @@ function handleCharacterSpells(character_sheet){
     const spell = item.action_custom
     if(spell.isSpell){
       const level = getSpellLevel(spell.level);
-      // console.log({level},{spellsLevel:spells[level]});
       spells[level]?.spells?.push(spell)
     }
   })
@@ -291,14 +300,12 @@ function handleSenses(character_sheet){
     a[newName] = character_sheet.senses[b];
     return a
   },{})
-  // console.log(character_sheet);
 }
 
 function handleStatsBonus(character_sheet){
   character_sheet.stats.forEach(elem => {
     elem.bonus = calculateBonus(elem.score)
   });
-  // console.log(character_sheet);
 }
 
 function handleProficiencies(character_sheet){
@@ -306,7 +313,6 @@ function handleProficiencies(character_sheet){
   character_sheet.proficiencies.weapons = character_sheet.proficiencies.weapons.split(',') 
   character_sheet.proficiencies.tools = character_sheet.proficiencies.tools.split(',') 
   character_sheet.proficiencies.languages = character_sheet.proficiencies.languages.split(',')
-  // console.log(character_sheet); 
 }
 
 function getSpellLevel(level){
@@ -338,15 +344,11 @@ async function getInventory(character_sheet){
   })
 
   try {
-    // console.log(response);
     const inventory = response.character_inventory
-    // console.log(inventory);
     const equipement = []
     const backpack = []
     for(i in inventory){
       const item = inventory[i]
-      // console.table(item);
-      // console.log(item.location);
       if(item.location === "Backpack"){
         if(!item.item.equipable) item.item.active = -1
         else if(item.equipped) item.item.active = 1
@@ -357,7 +359,6 @@ async function getInventory(character_sheet){
         backpack.push(item.item)
       }
       if(item.location === "Equipment"){
-        // console.log(item);
         if(!item.item.equipable) item.item.active = -1
         else if(item.equipped) item.item.active = 1
         else if(!item.equipped) item.item.active = 0
@@ -365,11 +366,8 @@ async function getInventory(character_sheet){
         delete item.location
         delete item.item.item_id
         equipement.push(item.item)
-        // console.log(item);
       }      
     }
-    // console.table({equipement});
-    // console.table({backpack});
     character_sheet.inventory = {
       copper:1,
       silver:2,
@@ -405,12 +403,10 @@ async function getEquipment(){
   const equipment = await axios.get("https://www.dnd5eapi.co/api/equipment")
   const categories = new Set();
   try {
-    // console.log(equipment);
     const indexes = []
     equipment.data.results.forEach(elem => {
       indexes.push(elem.index)
     })
-    // console.log(indexes);
     indexes.forEach(async elem => {
       const res = await axios.get(`https://www.dnd5eapi.co/api/equipment/${elem}`)
       try {
@@ -438,19 +434,16 @@ async function getEquipment(){
         //     data:item
         //   })
         //   try {
-        //     console.log(dbResponse);
+        //     console.lofg(dbResponse);
         //   } catch (error) {
-        //     console.log(error);
+        //     console.lofg(error);
         //   }
-          //  console.log(item,'\n------------------------------------------');
         }
 
-        // console.log(categories);
       } catch (error) {
         console.log(error);
       }
     })
-    // console.log(categories);
   } catch (error) {
     
   }
@@ -460,10 +453,8 @@ async function getArmor(){
   const armorLinks = await axios.get("https://www.dnd5eapi.co/api/equipment-categories/armor")
   const base = "https://www.dnd5eapi.co"
   try {
-    // console.log(armorLinks.data);
     const urls = armorLinks.data.equipment;
     urls.forEach((elem,i) => {
-      // console.log(`${base}${elem.url}`);
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
@@ -486,13 +477,13 @@ async function getArmor(){
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
-          // if(i < 10) console.log(item,'\n--------------------------------------------------------------\n'); 
+          // if(i < 10) console.lofg(item,'\n--------------------------------------------------------------\n'); 
           
-          // console.log(data,'\n--------------------------------------------------------------\n');
+          // console.lofg(data,'\n--------------------------------------------------------------\n');
         })
         .catch(err => {
           console.log(err);
@@ -510,12 +501,10 @@ async function getWeapon(req,resp){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.equipment;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data.name,data.cost);
           const item = {}
           item.notes = 'test'
           item.name = data.name;
@@ -535,14 +524,13 @@ async function getWeapon(req,resp){
           item.subname = item.subname.replaceAll('undefined','')
           item.properties = item.properties.replaceAll('undefined','')
           item.properties = item.properties.replaceAll(', ','')
-          // console.log(data.name,data.cost,item.cost);
           // const dbResponse = await global.prisma.item.create({
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
         })
     })
@@ -569,12 +557,10 @@ async function getMagicItem(req,res){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.results;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data);
           const item = {}
           item.notes = 'test'
           item.name = data.name;
@@ -589,15 +575,13 @@ async function getMagicItem(req,res){
           item.subname = item.subname.replaceAll('undefined','')
           item.properties = item.properties.replaceAll('undefined','')
           item.properties = item.properties.replaceAll(', ','')
-          // console.log({equipable:item.equipable},",",{properties:item.properties});
-          // console.log({item});
           // const dbResponse = await global.prisma.item.create({
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
         })
     })
@@ -611,12 +595,10 @@ async function getTools(req,res){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.equipment;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data.cost);
           const item = {}
           item.notes = 'test'
           item.name = data.name;
@@ -634,14 +616,13 @@ async function getTools(req,res){
           item.subname = item.subname.replaceAll('undefined','')
           item.properties = item.properties.replaceAll('undefined','')
           item.properties = item.properties.replaceAll(', ','')
-          // console.log(item);
           // const dbResponse = await global.prisma.item.create({
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
         })
     })
@@ -657,12 +638,10 @@ async function getAdventureGear(req,res){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.equipment;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data);
           const item = {}
           item.notes = 'test'
           item.name = data.name;
@@ -680,14 +659,13 @@ async function getAdventureGear(req,res){
           item.subname = item.subname.replaceAll('undefined','')
           item.properties = item.properties.replaceAll('undefined','')
           item.properties = item.properties.replaceAll(', ','')
-          // console.log(item);
           // const dbResponse = await global.prisma.item.create({
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
         })
     })
@@ -702,12 +680,10 @@ async function getMounts(req,res){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.equipment;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data);
           const item = {}
           item.notes = 'test'
           item.name = data.name;
@@ -725,14 +701,13 @@ async function getMounts(req,res){
           item.subname = item.subname.replaceAll('undefined','')
           item.properties = item.properties.replaceAll('undefined','')
           item.properties = item.properties.replaceAll(', ','')
-          // console.log(item);
           // const dbResponse = await global.prisma.item.create({
           //   data:item
           // })
           // try {
-          //   console.log(dbResponse);
+          //   console.lofg(dbResponse);
           // } catch (error) {
-          //   console.log(error);
+          //   console.lofg(error);
           // }
         })
     })
@@ -747,12 +722,10 @@ async function getSpells(){
   const base = "https://www.dnd5eapi.co"
   try {
     const urls = armorLinks.data.results;
-    // console.log(urls);
     urls.forEach(elem => {
       axios.get(`${base}${elem.url}`)
         .then(async res => {
           const data = res.data
-          // console.log(data);
           const spell = {};
           spell.name = data.name;
           spell.icon = data.school.index;
@@ -786,18 +759,6 @@ async function getSpells(){
           }
           spell.notes = ""
 
-
-          if(data.index === 'vicious-mockery' || data.index === 'sunbeam'){
-            // console.log(data);
-          }
-          if(spell.name === "Spirit Guardians" || spell.name === "Thunderwave"){
-            // console.log(JSON.stringify(spell?.damage));
-            // console.log({data},{spell});
-          }
-          if(spell.name === "Spiritual Weapon"){
-            // console.log(spell);
-            // console.log("\n",data);
-          }
           let duration = ""
           if(data.duration != "Instantaneous"){
             duration = "D: "
@@ -824,15 +785,14 @@ async function getSpells(){
             }
           }
           spell.notes += spell.components
-          const dbResponse = await global.prisma.action_custom.create({
-            data:spell
-          })
-          try {
-            // console.log(dbResponse);
-          } catch (error) {
-            // console.log(spell.name);
-            console.log(error);
-          }
+          // const dbResponse = await global.prisma.action_custom.create({
+          //   data:spell
+          // })
+          // try {
+          //   // console.lofg(dbResponse);
+          // } catch (error) {
+          //   console.lofg(error);
+          // }
         })
     })
   }
@@ -846,10 +806,8 @@ async function getEquipmentDb(req,res){
     where :{category:"weapon"}
   })
   try {
-    console.log(result);
     result.forEach(elem => {
       const item = {};
-      console.log(elem.name);
     })
   } catch (error) {
     
@@ -866,6 +824,7 @@ async function getWeaponAction(req,res){
       }
     },
     select: {
+      id:true,
       name:true, 
       icon:true, 
       damage:true, 
@@ -875,15 +834,55 @@ async function getWeaponAction(req,res){
       notes:true, 
       bonus:true, 
       attack_type:true, 
-      damage_type:true
+      damage_type:true,
+      properties:true
     }
   })
   try {
-    console.log(result);
+    // console.lofg(result);
+    // addActionOfEquipedWeapons(result[0])
+    return result[0]
     res.send(result[0])
   } catch (error) {
     console.log(error);
   }
+}
+
+function addActionOfEquipedWeapons(item,character_sheet){
+  const inventory = character_sheet.inventory;
+  const equipment = inventory.equipment
+  const backpack = inventory.backpack
+  const alsmBox = inventory.alsmBox
+  let location;
+
+  equipment.forEach(elem => {
+    if(elem.name === item.name) location = "equipment"
+  })
+
+  if(inventory.hasBackpack){
+    backpack.forEach(elem => {
+      if(elem.name === item.name) location = "backpack"  
+    })
+  }
+
+  if(inventory.hasAlmsBox){
+    alsmBox.forEach(elem => {
+      if(elem.name === item.name) location = "almsBox"  
+    })
+  }
+
+  // console.log(inventory[location]);
+  character_sheet.inventory[location].forEach(elem => {
+    if(elem.name === item.name) {
+      elem.active = 1
+      handleProficiencyBonus(item,character_sheet)
+      character_sheet.actions.attacks.push(item)
+    }
+    
+  })
+
+  // console.log(location);
+
 }
 
 
