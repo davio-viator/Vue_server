@@ -1,6 +1,8 @@
 const spellSlots = require('./spellSlots.js')
 const axios = require('axios')
 
+const prisma = global.prisma;
+
 const SpellcastingAbility = {
   artificier:"intelligence",
   wizard:"intelligence",
@@ -854,6 +856,36 @@ async function getEquipmentDb(req,res){
   }
 }
 
+async function getWeaponAction(req,res){
+  const name = req.query.name
+  const result = await prisma.action_custom.findMany({
+    where :{
+      name,
+      attack_type:{
+        contains:'weapon'
+      }
+    },
+    select: {
+      name:true, 
+      icon:true, 
+      damage:true, 
+      subtitle:true, 
+      range:true, 
+      hit_dc:true, 
+      notes:true, 
+      bonus:true, 
+      attack_type:true, 
+      damage_type:true
+    }
+  })
+  try {
+    console.log(result);
+    res.send(result[0])
+  } catch (error) {
+    console.log(error);
+  }
+}
+
 
 function isEquipable(item) {
   return item.properties.includes('Weapon') 
@@ -874,6 +906,7 @@ module.exports = {
   getAdventureGear,
   getMounts,
   getSpells,
-  getEquipmentDb
+  getEquipmentDb,
+  getWeaponAction
 }
 

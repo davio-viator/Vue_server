@@ -98,4 +98,8 @@ router.get('/get-weapons',async (req,res) => {
   }
 })
 
+router.get('/weapon-action',(req,res) => {
+  characterService.getWeaponAction(req,res)
+})
+
 module.exports = router
