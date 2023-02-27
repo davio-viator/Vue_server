@@ -11,6 +11,10 @@ router.get('/character/:character_id',validateToken,(req,res) => {
   },000)
 })
 
+router.put('/character/:character_id',(req,res) => {
+  characterService.updateActiveEquipment(req,res)
+})
+
 router.get('/getcharacter/equipment',async (req,res)=> {
   await characterService.getEquipment();
   try {

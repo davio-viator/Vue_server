@@ -94,6 +94,27 @@ async function getCharacterSheet(req,res){
   }
 }
 
+async function updateActiveEquipment(req,res) {
+  let  {character_id} = req.params;
+  character_id = parseInt(character_id);
+  let {item_id} = req.body
+  item_id = parseInt(item_id);
+  let {active} = req.body
+  active = parseInt(active);
+  console.log({character_id},{item_id},{active});
+  prisma.character_inventory.update({
+    where:{ character_id_item_id:{character_id,item_id} },
+    data:{equipped:active === 1}
+  })
+  .then(result => {
+    res.status(200).json({message:"inventory updated"})
+  })
+  .catch(err => {
+    console.log(err);
+    res.status(400).json({message:err})
+  })
+}
+
 function handleCharacterSheet(character_sheet) {
   handleStatsBonus(character_sheet);
   handleClasses(character_sheet);
@@ -356,7 +377,7 @@ async function getInventory(character_sheet){
         item.item.quantity = item.quantity
         delete item.equipped
         delete item.location
-        delete item.item.item_id
+        // delete item.item.item_id
         backpack.push(item.item)
       }
       if(item.location === "Equipment"){
@@ -366,7 +387,7 @@ async function getInventory(character_sheet){
         item.item.quantity = item.quantity
         delete item.equipped
         delete item.location
-        delete item.item.item_id
+        // delete item.item.item_id
         equipement.push(item.item)
       }      
     }
@@ -899,6 +920,7 @@ function isEquipable(item) {
 
 module.exports = {
   getCharacterSheet,
+  updateActiveEquipment,
   getEquipment,
   getArmor,
   getWeapon,
@@ -910,4 +932,3 @@ module.exports = {
   getEquipmentDb,
   getWeaponAction
 }
-
