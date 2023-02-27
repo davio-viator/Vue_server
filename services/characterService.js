@@ -353,6 +353,7 @@ async function getInventory(character_sheet){
         if(!item.item.equipable) item.item.active = -1
         else if(item.equipped) item.item.active = 1
         else if(!item.equipped) item.item.active = 0
+        item.item.quantity = item.quantity
         delete item.equipped
         delete item.location
         delete item.item.item_id
@@ -362,6 +363,7 @@ async function getInventory(character_sheet){
         if(!item.item.equipable) item.item.active = -1
         else if(item.equipped) item.item.active = 1
         else if(!item.equipped) item.item.active = 0
+        item.item.quantity = item.quantity
         delete item.equipped
         delete item.location
         delete item.item.item_id
