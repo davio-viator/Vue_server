@@ -107,12 +107,83 @@ async function updateActiveEquipment(req,res) {
     data:{equipped:active === 1}
   })
   .then(result => {
-    res.status(200).json({message:"inventory updated"})
+    // console.log(result);
+    // if(active === 1){
+      updateCharacterActions(req,res,active);
+    // }
   })
   .catch(err => {
     console.log(err);
     res.status(400).json({message:err})
   })
+}
+
+async function updateCharacterActions(req,res,active){
+  let  {character_id} = req.params;
+  character_id = parseInt(character_id);
+  let {item_id} = req.body
+  item_id = parseInt(item_id);
+
+  /* const resultDb = await  */prisma.$queryRaw`
+  SELECT *
+  FROM action_custom 
+  WHERE NAME = 
+              (
+                SELECT name 
+                FROM item 
+                WHERE item_id = ${item_id}
+              );`
+  
+  .then(resp =>{
+    if(active === 1) createCustomAction(resp, character_id,res);
+    if(active === 0) deleteCustomAction(resp, character_id,res);
+  })
+  .catch(err=>{
+    console.log(err);
+    res.status(400).json({messasge:"something went wrong",error:err})
+  })
+  // try {
+  //   if(active === 1){
+  //   }
+  //   if(active === 0){
+  //   }
+
+  // } catch (error) {
+    
+  // }
+}
+
+async function deleteCustomAction(resultDb, character_id,res) {
+  const result = resultDb[0];
+  prisma.character_sheet_custom_action.delete({
+    where:{character_id_action_id:{character_id,action_id:result.id}},
+  })
+    .then(resp => {
+      return res.status(200).json({message:"inventory updated",resp});
+    })
+    .catch(err => {
+      console.log(err);
+      return res.status(400).json({message:"Something went wrong",err});
+
+    });
+}
+
+function createCustomAction(resultDb, character_id,res) {
+  const result = resultDb[0];
+  prisma.character_sheet_custom_action.create({
+    data: {
+      character_id,
+      action_id: result.id
+    }
+  })
+    .then(resp => {
+      res.status(200).json({message:"inventory updated"});
+
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(400).json({message:"Something went wrong"});
+    });
 }
 
 function handleCharacterSheet(character_sheet) {
@@ -200,15 +271,16 @@ function handleSpellDc(action, character_sheet) {
 
 function handleWeaponProficiencies(action,character_sheet){
   const properties = action?.properties
+  // console.log(action);
   if(properties){
     const propertiesArray = properties.split(',');
-    const weapons_proficiencies = character_sheet.proficiencies.weapons
+    const weapons_proficiencies = character_sheet.proficiencies.weapons.toLowerCase()
     propertiesArray.forEach(item => {
-      if(weapons_proficiencies.includes(item)){
+      if(weapons_proficiencies.includes(item.toLowerCase()) || weapons_proficiencies.includes(item.toLowerCase()+' weapon')){
         handleProficiencyBonus(action,character_sheet)
       }
     })
-    
+    handleUnproficientBonus(action,character_sheet);     
   }
 }
 
@@ -218,6 +290,22 @@ function handleSpellProfiencies(action,character_sheet){
     if(properties.includes('variable')){
       const modifier = getSpellModifier(character_sheet)
       action.damage = `${action.damage}+${modifier}`
+    }
+  }
+}
+
+function handleUnproficientBonus(action,character_sheet){
+  const strengthBonus = character_sheet.stats.find(el => el.name === 'strength').bonus
+  const dexterityBonus = character_sheet.stats.find(el => el.name === 'dexterity').bonus
+  const bestStat = findBestStat(strengthBonus,dexterityBonus)
+  if(action.attack_type === "melee weapon" && action.hit_dc.toString().includes('|')){
+    if(action.properties.includes('Finesse')){
+      action.damage += `+${bestStat}`
+      action.hit_dc = bestStat
+    }
+    else {
+      action.damage += `+${strengthBonus}`
+      action.hit_dc = strengthBonus
     }
   }
 }
