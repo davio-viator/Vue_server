@@ -15,9 +15,9 @@ router.delete('/cards',(req,res) => {
   deleteCards(req,res);
 })
 
-router.get('/note',(req,res) => {
-  getCardNote(req,res)
-})
+// router.get('/note',(req,res) => {
+//   getCardNote(req,res)
+// })
 
 
 module.exports = router

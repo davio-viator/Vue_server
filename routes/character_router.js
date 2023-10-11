@@ -106,4 +106,13 @@ router.get('/weapon-action',(req,res) => {
   characterService.getWeaponAction(req,res)
 })
 
+router.patch('/hp',async (req,res) => {
+  const x = await characterService.updateHp(req,res)
+  try {
+    res.send(x)
+  } catch (error) {
+    res.status(400).send(error)
+  }
+});
+
 module.exports = router

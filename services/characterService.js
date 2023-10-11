@@ -982,8 +982,7 @@ function addActionOfEquipedWeapons(item,character_sheet){
     })
   }
 
-  // console.log(inventory[location]);
-  character_sheet.inventory[location].forEach(elem => {
+  character_sheet.inventory[location]?.forEach(elem => {
     if(elem.name === item.name) {
       elem.active = 1
       handleProficiencyBonus(item,character_sheet)
@@ -1006,6 +1005,23 @@ function isEquipable(item) {
   || item.properties.includes('Wand')
 }
 
+async function updateHp(req,res){
+  const {id, value, type} = req.body.body
+  const resp = await prisma.character_sheet.update({
+    where:{
+      character_id:id
+    },
+    data:{
+      [type]:value
+    }
+  })
+  try {
+    res.send(resp)
+  } catch (error) {
+    res.status(400).send(error)
+  }
+}
+
 module.exports = {
   getCharacterSheet,
   updateActiveEquipment,
@@ -1018,5 +1034,6 @@ module.exports = {
   getMounts,
   getSpells,
   getEquipmentDb,
-  getWeaponAction
+  getWeaponAction,
+  updateHp
 }
