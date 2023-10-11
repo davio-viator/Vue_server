@@ -125,4 +125,12 @@ router.patch('/inspiration',async (req,res) => {
   }
 })
 
+router.patch('/spell-slots', async (req,res) => {
+  try {
+    const x = await characterService.updateSpellSlots(req,res);
+  } catch (error) {
+    return error
+  }
+});
+
 module.exports = router

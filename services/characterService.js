@@ -101,7 +101,7 @@ async function updateActiveEquipment(req,res) {
   item_id = parseInt(item_id);
   let {active} = req.body
   active = parseInt(active);
-  console.log({character_id},{item_id},{active});
+  // console.log({character_id},{item_id},{active});
   prisma.character_inventory.update({
     where:{ character_id_item_id:{character_id,item_id} },
     data:{equipped:active === 1}
@@ -1040,6 +1040,14 @@ async function setInspiration(req,res){
   }
 }
 
+async function updateSpellSlots(req,res){
+  const {id,spell_level,quantity} = req.body;
+  console.log({id,spell_level,quantity});
+  return new Promise((resolve) => {
+    resolve(1)
+  })
+}
+
 module.exports = {
   getCharacterSheet,
   updateActiveEquipment,
@@ -1054,5 +1062,6 @@ module.exports = {
   getEquipmentDb,
   getWeaponAction,
   updateHp,
-  setInspiration
+  setInspiration,
+  updateSpellSlots,
 }
