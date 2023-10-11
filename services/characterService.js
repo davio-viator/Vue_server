@@ -913,49 +913,50 @@ async function getSpells(){
 }
 
 async function getEquipmentDb(req,res){
-  const result = await global.prisma.item.findMany({
-    where :{category:"weapon"}
-  })
   try {
+    const result = await global.prisma.item.findMany({
+      where :{category:"weapon"}
+    })
     result.forEach(elem => {
       const item = {};
     })
   } catch (error) {
-    
+    throw new Error(error)
   }
 }
 
 async function getWeaponAction(req,res){
   const name = req.query.name
-  const result = await prisma.action_custom.findMany({
-    where :{
-      name,
-      attack_type:{
-        contains:'weapon'
-      }
-    },
-    select: {
-      id:true,
-      name:true, 
-      icon:true, 
-      damage:true, 
-      subtitle:true, 
-      range:true, 
-      hit_dc:true, 
-      notes:true, 
-      bonus:true, 
-      attack_type:true, 
-      damage_type:true,
-      properties:true
-    }
-  })
   try {
+    const result = await prisma.action_custom.findMany({
+      where :{
+        name,
+        attack_type:{
+          contains:'weapon'
+        }
+      },
+      select: {
+        id:true,
+        name:true, 
+        icon:true, 
+        damage:true, 
+        subtitle:true, 
+        range:true, 
+        hit_dc:true, 
+        notes:true, 
+        bonus:true, 
+        attack_type:true, 
+        damage_type:true,
+        properties:true
+      }
+    })
     // console.lofg(result);
     // addActionOfEquipedWeapons(result[0])
     return result[0]
     res.send(result[0])
   } catch (error) {
     console.log(error);
+    throw new Error(error)
   }
 }
 
@@ -1007,18 +1008,35 @@ function isEquipable(item) {
 
 async function updateHp(req,res){
   const {id, value, type} = req.body.body
-  const resp = await prisma.character_sheet.update({
-    where:{
-      character_id:id
-    },
-    data:{
-      [type]:value
-    }
-  })
   try {
+    const resp = await prisma.character_sheet.update({
+      where:{
+        character_id:id
+      },
+      data:{
+        [type]:value
+      }
+    })
     res.send(resp)
   } catch (error) {
     res.status(400).send(error)
+  }
+}
+
+async function setInspiration(req,res){
+  const {id, inspiration} = req.body;
+  try {
+    const resp = prisma.character_sheet.update({
+      where:{
+        character_id: id,
+      },
+      data:{
+        inspiration
+      }
+    })
+    return resp
+  } catch (error) {
+    throw new Error(error)
   }
 }
 
@@ -1035,5 +1053,6 @@ module.exports = {
   getSpells,
   getEquipmentDb,
   getWeaponAction,
-  updateHp
+  updateHp,
+  setInspiration
 }

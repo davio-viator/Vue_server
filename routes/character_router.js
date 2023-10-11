@@ -16,8 +16,8 @@ router.put('/character/:character_id',(req,res) => {
 })
 
 router.get('/getcharacter/equipment',async (req,res)=> {
-  await characterService.getEquipment();
   try {
+    await characterService.getEquipment();
     res.send()
   } catch (error) {
     
@@ -25,8 +25,8 @@ router.get('/getcharacter/equipment',async (req,res)=> {
 })
 
 router.get('/armor',async (req,res)=> {
-  const x = await characterService.getArmor(req,res)
   try {
+    const x = await characterService.getArmor(req,res)
     console.log(x);
     res.send(x)
   } catch (error) {
@@ -35,8 +35,8 @@ router.get('/armor',async (req,res)=> {
 })
 
 router.get('/weapon',async (req,res)=> {
-  const x = await characterService.getWeapon(req,res)
   try {
+    const x = await characterService.getWeapon(req,res)
     console.log(x);
     res.send(x)
   } catch (error) {
@@ -45,8 +45,8 @@ router.get('/weapon',async (req,res)=> {
 })
 
 router.get('/magic-item', async (req,res) => {
-  const x = await characterService.getMagicItem(req,res)
   try {
+    const x = await characterService.getMagicItem(req,res)
     // console.log(x);
     res.send(x)
   } catch (error) {
@@ -55,8 +55,8 @@ router.get('/magic-item', async (req,res) => {
 })
 
 router.get('/tools',async (req,res) => {
-  const x = await characterService.getTools(req,res)
   try {
+    const x = await characterService.getTools(req,res)
     // console.log(x);
     res.send(x)
   } catch (error) {
@@ -65,8 +65,8 @@ router.get('/tools',async (req,res) => {
 })
 
 router.get('/gear',async (req,res) => {
-  const x = await characterService.getAdventureGear(req,res)
   try {
+    const x = await characterService.getAdventureGear(req,res)
     // console.log(x);
     res.send(x)
   } catch (error) {
@@ -75,8 +75,8 @@ router.get('/gear',async (req,res) => {
 })
 
 router.get('/mount',async (req,res)=> {
-  const x = await characterService.getMounts(req,res)
   try {
+    const x = await characterService.getMounts(req,res)
     // console.log(x);
     res.send(x)
   } catch (error) {
@@ -85,8 +85,8 @@ router.get('/mount',async (req,res)=> {
 })
 
 router.get('/spell',async (req,res) => {
-  const x = await characterService.getSpells(req,res)
   try {
+    const x = await characterService.getSpells(req,res)
     res.send(x)
   } catch (error) {
     
@@ -94,8 +94,8 @@ router.get('/spell',async (req,res) => {
 })
 
 router.get('/get-weapons',async (req,res) => {
-  const x = await characterService.getEquipmentDb(req,res)
   try {
+    const x = await characterService.getEquipmentDb(req,res)  
     res.send(x)
   } catch (error) {
     
@@ -107,12 +107,22 @@ router.get('/weapon-action',(req,res) => {
 })
 
 router.patch('/hp',async (req,res) => {
-  const x = await characterService.updateHp(req,res)
   try {
+    const x = await characterService.updateHp(req,res)
     res.send(x)
   } catch (error) {
     res.status(400).send(error)
   }
 });
+
+router.patch('/inspiration',async (req,res) => {
+  try {
+    const x = await characterService.setInspiration(req,res);
+    res.send(x)
+  } catch (error) {
+    console.log(error);
+    res.status(400).send(error)
+  }
+})
 
 module.exports = router
