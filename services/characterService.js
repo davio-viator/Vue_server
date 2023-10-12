@@ -73,9 +73,58 @@ async function getCharacterSheet(req,res){
       },
       character_sheet_custom_action:{
         select : { action_custom:true }
-      }
+      },
     },
   })
+  try {
+    getClassesInfo(character_id)
+  } catch (error) {
+    console.log(error)
+  }
+  async function getClassesInfo (character_id){
+    let char;
+    try {
+      char = await prisma.character_sheet.findUnique({
+        where:{character_id},
+        include:{
+          character_classes:{
+            // select:{level:true, subclass:true},
+            include:{
+              classes:{
+                select: {class_name:true,is_spellcaster:true,saves:true,primary_ability:true, class_bonuses:true},
+              }
+            }
+          }
+        }
+      })
+      console.log({char});
+      console.log({class:char.character_classes});
+      try {
+        const infos = await getSpellSlotsInfo(char.character_id,char.class_id)
+        console.log({infos});
+      } catch (error) {
+        console.log(error);
+      }
+    } catch (error) {
+      console.log(error)
+    }
+    async function getSpellSlotsInfo(class_id,level){
+      console.log({class_id,level});
+      try {
+        const infos = await prisma.class_spell_slots.findUnique({
+          where:{
+            class_id_class_level:{
+              class_id,
+              class_level:level
+            }
+          }
+        })
+        return infos
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  }
   try {
     const character_sheet = response[0];
     await getInventory(character_sheet)
@@ -1043,6 +1092,8 @@ async function setInspiration(req,res){
 async function updateSpellSlots(req,res){
   const {id,spell_level,quantity} = req.body;
   console.log({id,spell_level,quantity});
+  prisma.character_sheet.update({
+  })
   return new Promise((resolve) => {
     resolve(1)
   })

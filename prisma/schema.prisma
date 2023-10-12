@@ -17,6 +17,36 @@ model action {
   character_actions character_actions[]
 }
 
+model action_custom {
+  id                            Int                             @id @default(autoincrement())
+  name                          String?                         @unique(map: "name") @db.VarChar(50)
+  icon                          String?                         @db.VarChar(50)
+  subtitle                      String?                         @db.VarChar(50)
+  range                         String?                         @db.VarChar(50)
+  hit_dc                        String?                         @db.VarChar(50)
+  damage                        String?                         @db.VarChar(255)
+  notes                         String?                         @db.VarChar(255)
+  bonus                         Boolean?
+  isAttack                      Boolean?
+  isFeature                     Boolean?
+  isLimited                     Boolean?
+  isSpell                       Boolean?
+  attack_type                   String?                         @db.VarChar(50)
+  damage_type                   String?                         @db.VarChar(50)
+  location                      String?                         @db.VarChar(50)
+  properties                    String?                         @db.VarChar(50)
+  text                          String?                         @db.Text
+  description                   String?                         @db.Text
+  frequency                     action_custom_frequency?
+  quantity                      Int?
+  level                         Int?
+  school                        String?                         @db.VarChar(50)
+  castingTime                   String?                         @db.VarChar(50)
+  components                    String?                         @db.VarChar(50)
+  duration                      String?                         @db.VarChar(50)
+  character_sheet_custom_action character_sheet_custom_action[]
+}
+
 model attack {
   attack_id         Int                 @id
   name              String?             @db.VarChar(50)
@@ -33,6 +63,60 @@ model attack {
   character_attacks character_attacks[]
 }
 
+model c_action {
+  id                      Int                       @id
+  icon                    String?                   @db.VarChar(500)
+  name                    String?                   @db.VarChar(50)
+  subtitle                String?                   @db.VarChar(20)
+  range                   Int?
+  hit_dc                  String?                   @db.VarChar(50)
+  damage                  String?                   @db.VarChar(50)
+  notes                   String?                   @db.VarChar(50)
+  bonus                   Boolean?
+  c_attack                c_attack?
+  c_feature               c_feature?
+  c_spell                 c_spell?
+  character_sheet_actions character_sheet_actions[]
+}
+
+model c_attack {
+  attack_id   Int      @id
+  attack_type String   @default("") @db.VarChar(50)
+  damage_type String   @default("") @db.VarChar(50)
+  location    String   @default("") @db.VarChar(50)
+  properties  String?  @default("") @db.VarChar(255)
+  proficient  Boolean?
+  action_id   Int      @unique(map: "action_id") @default(0)
+  c_action    c_action @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action")
+}
+
+model c_feature {
+  feature_id  Int                  @id
+  isLimited   Boolean              @default(false)
+  isAttack    Boolean              @default(false)
+  damage_type String               @default("") @db.VarChar(50)
+  text        String               @db.Text
+  frequency   c_feature_frequency?
+  quantity    Int?
+  action_id   Int                  @unique(map: "action_id")
+  c_action    c_action             @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action_feature")
+}
+
+model c_spell {
+  spell_id     Int       @id
+  level        Int       @default(0)
+  damage_type  String    @default("0") @db.VarChar(50)
+  cast         String    @default("0") @db.VarChar(50)
+  school       String    @default("0") @db.VarChar(50)
+  casting_time String    @default("0") @db.VarChar(50)
+  components   String    @default("0") @db.VarChar(50)
+  duration     String    @default("0") @db.VarChar(50)
+  text         String    @db.Text
+  isAttack     Boolean   @default(false)
+  action_id    Int?      @unique(map: "action_id")
+  c_action     c_action? @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__spell__action")
+}
+
 model card {
   card_id    Int     @id @default(autoincrement())
   name       String  @default("") @db.VarChar(50)
@@ -45,14 +129,51 @@ model card {
   notes      notes[]
 }
 
+model character_actions {
+  character_id    Int
+  actions_id      Int
+  action          action          @relation(fields: [actions_id], references: [action_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos")
+
+  @@id([character_id, actions_id])
+  @@index([actions_id], map: "FK__action")
+}
+
+model character_attacks {
+  character_id    Int             @map(" character_id")
+  attack_id       Int
+  isProficient    Boolean?        @default(false)
+  attack          attack          @relation(fields: [attack_id], references: [attack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__attack")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos_attacck")
+
+  @@id([character_id, attack_id])
+  @@index([attack_id], map: "FK__attack")
+}
+
 model character_classes {
   character_id    Int
+  class_id        Int
   class_name      character_classes_class_name
   subclass        String?                      @db.VarChar(50)
   level           Int?
   character_sheet character_sheet              @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_classes_character_sheet")
+  classes         classes                      @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_classes_classes")
 
-  @@id([character_id, class_name])
+  @@id([character_id, class_id])
+  @@index([class_id], map: "FK_character_classes_classes")
+}
+
+model character_inventory {
+  character_id    Int
+  item_id         Int
+  equipped        Boolean?
+  location        character_inventory_location?
+  quantity        Int?                          @default(1)
+  character_sheet character_sheet               @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_character_sheet")
+  item            item                          @relation(fields: [item_id], references: [item_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_character_inventory_item")
+
+  @@id([character_id, item_id])
+  @@index([item_id], map: "FK_character_inventory_item")
 }
 
 model character_sheet {
@@ -89,6 +210,85 @@ model character_sheet {
   stats                         stats[]
 
   @@index([owner_id], map: "owner_id")
+}
+
+model character_sheet_actions {
+  character_sheet_id Int
+  c_action_id        Int
+  c_action           c_action        @relation(fields: [c_action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__c_action")
+  character_sheet    character_sheet @relation(fields: [character_sheet_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_actions")
+
+  @@id([character_sheet_id, c_action_id])
+  @@index([c_action_id], map: "FK__c_action")
+}
+
+model character_sheet_custom_action {
+  character_id    Int
+  action_id       Int
+  action_custom   action_custom   @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action_custom")
+  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheetz'-tyzsr'yu")
+
+  @@id([character_id, action_id])
+  @@index([action_id], map: "FK__action_custom")
+}
+
+model class_spell_slots {
+  class_id      Int
+  class_level   Int
+  cantrip_known Int?
+  spell_known   Int?
+  first_level   Int?
+  second_level  Int?
+  third_level   Int?
+  fourth_level  Int?
+  fifth_level   Int?
+  sixth_level   Int?
+  seventh_level Int?
+  eighth        Int?
+  ninth         Int?
+  classes       classes @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_class_spell_slots_classes")
+
+  @@id([class_id, class_level])
+}
+
+model classes {
+  class_id          Int                      @id @default(autoincrement())
+  class_name        classes_class_name?
+  description       String?                  @db.VarChar(200)
+  is_spellcaster    Boolean?
+  hit_dice          classes_hit_dice?
+  saves             String?                  @db.VarChar(50)
+  primary_ability   classes_primary_ability?
+  class_bonuses     Json?
+  character_classes character_classes[]
+  class_spell_slots class_spell_slots[]
+}
+
+model item {
+  item_id             Int                   @id @default(autoincrement())
+  name                String?               @db.VarChar(50)
+  subname             String?               @db.VarChar(50)
+  weight              Float?                @default(0) @db.Float
+  cost                Float?                @default(0) @db.Float
+  notes               String?               @db.VarChar(255)
+  description         String?               @db.Text
+  equipable           Boolean?
+  properties          String?               @db.Text
+  category            String?               @db.VarChar(50)
+  rarity              String?               @db.VarChar(50)
+  character_inventory character_inventory[]
+}
+
+model notes {
+  card_id Int
+  user_id Int
+  title   String? @db.VarChar(50)
+  content String? @db.MediumText
+  card    card    @relation(fields: [card_id], references: [card_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__card")
+  user    user    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_notes_user")
+
+  @@id([card_id, user_id])
+  @@index([user_id], map: "FK_notes_user")
 }
 
 model proficiencies {
@@ -151,195 +351,20 @@ model user {
   notes           notes[]
 }
 
-model notes {
-  card_id Int
-  user_id Int
-  title   String? @db.VarChar(50)
-  content String? @db.MediumText
-  card    card    @relation(fields: [card_id], references: [card_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__card")
-  user    user    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_notes_user")
-
-  @@id([card_id, user_id])
-  @@index([user_id], map: "FK_notes_user")
-}
-
-model character_actions {
-  character_id    Int
-  actions_id      Int
-  action          action          @relation(fields: [actions_id], references: [action_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action")
-  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos")
-
-  @@id([character_id, actions_id])
-  @@index([actions_id], map: "FK__action")
-}
-
-model character_attacks {
-  character_id    Int             @map(" character_id")
-  attack_id       Int
-  isProficient    Boolean?        @default(false)
-  attack          attack          @relation(fields: [attack_id], references: [attack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__attack")
-  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_assos_attacck")
-
-  @@id([character_id, attack_id])
-  @@index([attack_id], map: "FK__attack")
-}
-
-model c_action {
-  id                      Int                       @id
-  icon                    String?                   @db.VarChar(500)
-  name                    String?                   @db.VarChar(50)
-  subtitle                String?                   @db.VarChar(20)
-  range                   Int?
-  hit_dc                  String?                   @db.VarChar(50)
-  damage                  String?                   @db.VarChar(50)
-  notes                   String?                   @db.VarChar(50)
-  bonus                   Boolean?
-  c_attack                c_attack?
-  c_feature               c_feature?
-  c_spell                 c_spell?
-  character_sheet_actions character_sheet_actions[]
-}
-
-model c_attack {
-  attack_id   Int      @id
-  attack_type String   @default("") @db.VarChar(50)
-  damage_type String   @default("") @db.VarChar(50)
-  location    String   @default("") @db.VarChar(50)
-  properties  String?  @default("") @db.VarChar(255)
-  proficient  Boolean?
-  action_id   Int      @unique(map: "action_id") @default(0)
-  c_action    c_action @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action")
-}
-
-model c_feature {
-  feature_id  Int                  @id
-  isLimited   Boolean              @default(false)
-  isAttack    Boolean              @default(false)
-  damage_type String               @default("") @db.VarChar(50)
-  text        String               @db.Text
-  frequency   c_feature_frequency?
-  quantity    Int?
-  action_id   Int                  @unique(map: "action_id")
-  c_action    c_action             @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK___action_feature")
-}
-
-model c_spell {
-  spell_id     Int       @id
-  level        Int       @default(0)
-  damage_type  String    @default("0") @db.VarChar(50)
-  cast         String    @default("0") @db.VarChar(50)
-  school       String    @default("0") @db.VarChar(50)
-  casting_time String    @default("0") @db.VarChar(50)
-  components   String    @default("0") @db.VarChar(50)
-  duration     String    @default("0") @db.VarChar(50)
-  text         String    @db.Text
-  isAttack     Boolean   @default(false)
-  action_id    Int?      @unique(map: "action_id")
-  c_action     c_action? @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__spell__action")
-}
-
-model character_sheet_actions {
-  character_sheet_id Int
-  c_action_id        Int
-  c_action           c_action        @relation(fields: [c_action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__c_action")
-  character_sheet    character_sheet @relation(fields: [character_sheet_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheet_actions")
-
-  @@id([character_sheet_id, c_action_id])
-  @@index([c_action_id], map: "FK__c_action")
-}
-
-model action_custom {
-  id                            Int                             @id @default(autoincrement())
-  name                          String?                         @unique(map: "name") @db.VarChar(50)
-  icon                          String?                         @db.VarChar(50)
-  subtitle                      String?                         @db.VarChar(50)
-  range                         String?                         @db.VarChar(50)
-  hit_dc                        String?                         @db.VarChar(50)
-  damage                        String?                         @db.VarChar(255)
-  notes                         String?                         @db.VarChar(255)
-  bonus                         Boolean?
-  isAttack                      Boolean?
-  isFeature                     Boolean?
-  isLimited                     Boolean?
-  isSpell                       Boolean?
-  attack_type                   String?                         @db.VarChar(50)
-  damage_type                   String?                         @db.VarChar(50)
-  location                      String?                         @db.VarChar(50)
-  properties                    String?                         @db.VarChar(50)
-  text                          String?                         @db.Text
-  description                   String?                         @db.Text
-  frequency                     action_custom_frequency?
-  quantity                      Int?
-  level                         Int?
-  school                        String?                         @db.VarChar(50)
-  castingTime                   String?                         @db.VarChar(50)
-  components                    String?                         @db.VarChar(50)
-  duration                      String?                         @db.VarChar(50)
-  character_sheet_custom_action character_sheet_custom_action[]
-}
-
-model character_sheet_custom_action {
-  character_id    Int
-  action_id       Int
-  action_custom   action_custom   @relation(fields: [action_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__action_custom")
-  character_sheet character_sheet @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__character_sheetz'-tyzsr'yu")
-
-  @@id([character_id, action_id])
-  @@index([action_id], map: "FK__action_custom")
-}
-
-model character_inventory {
-  character_id    Int
-  item_id         Int
-  equipped        Boolean?
-  location        character_inventory_location?
-  quantity        Int?                          @default(1)
-  character_sheet character_sheet               @relation(fields: [character_id], references: [character_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_character_inventory_character_sheet")
-  item            item                          @relation(fields: [item_id], references: [item_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_character_inventory_item")
-
-  @@id([character_id, item_id])
-  @@index([item_id], map: "FK_character_inventory_item")
-}
-
-model item {
-  item_id             Int                   @id @default(autoincrement())
-  name                String?               @db.VarChar(50)
-  subname             String?               @db.VarChar(50)
-  weight              Float?                @default(0) @db.Float
-  cost                Float?                @default(0) @db.Float
-  notes               String?               @db.VarChar(255)
-  description         String?               @db.Text
-  equipable           Boolean?
-  properties          String?               @db.Text
-  category            String?               @db.VarChar(50)
-  rarity              String?               @db.VarChar(50)
-  character_inventory character_inventory[]
-}
-
-enum character_classes_class_name {
-  barbarian
-  bard
-  cleric
-  druid
-  fighter
-  monk
-  paladin
-  ranger
-  rogue
-  sorcerer
-  warlock
-  wizard
-}
-
-enum character_sheet_sex {
-  Male
-  Female
-}
-
-enum user_status {
-  DM
-  Player
-  Admin
+enum classes_class_name {
+  Barbarian
+  Bard
+  Blood_Hunter @map("Blood Hunter")
+  Cleric
+  Druid
+  Fighter
+  Monk
+  Paladin
+  Ranger
+  Rogue
+  Sorcerer
+  Warlock
+  Wizard
 }
 
 enum saving_throws_name {
@@ -360,15 +385,19 @@ enum stats_name {
   charisma
 }
 
-enum c_feature_frequency {
-  Short_Rest @map("Short Rest")
-  Long_Rest  @map("Long Rest")
-}
-
-enum action_custom_frequency {
-  Short_Rest       @map("Short Rest")
-  Long_Rest        @map("Long Rest")
-  EMPTY_ENUM_VALUE @map("")
+enum character_classes_class_name {
+  barbarian
+  bard
+  cleric
+  druid
+  fighter
+  monk
+  paladin
+  ranger
+  rogue
+  sorcerer
+  warlock
+  wizard
 }
 
 enum character_inventory_location {
@@ -376,4 +405,49 @@ enum character_inventory_location {
   Backpack
   Attunement
   Alsm_Box   @map("Alsm Box")
+}
+
+enum character_sheet_sex {
+  Male
+  Female
+}
+
+enum classes_hit_dice {
+  d4
+  d6
+  d8
+  d10
+  d12
+}
+
+enum c_feature_frequency {
+  Short_Rest @map("Short Rest")
+  Long_Rest  @map("Long Rest")
+}
+
+enum user_status {
+  DM
+  Player
+  Admin
+}
+
+enum classes_primary_ability {
+  Strength
+  Dexterity
+  Constitution
+  Intelligence
+  Wisdom
+  Charisma
+  Strength_or_Dexterity                          @map("Strength or Dexterity")
+  Intelligence_or_Wisdom                         @map("Intelligence or Wisdom")
+  Strength_ou_Dexterity___Intelligence_ou_Wisdom @map("Strength ou Dexterity & Intelligence ou Wisdom")
+  Strength___Dexterity                           @map("Strength & Dexterity")
+  Strength___Charisma                            @map("Strength & Charisma")
+  Dexterity___Charisma                           @map("Dexterity & Charisma")
+}
+
+enum action_custom_frequency {
+  Short_Rest       @map("Short Rest")
+  Long_Rest        @map("Long Rest")
+  EMPTY_ENUM_VALUE @map("")
 }
