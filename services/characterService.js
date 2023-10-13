@@ -97,19 +97,22 @@ async function getCharacterSheet(req,res){
           }
         }
       })
-      console.log({char});
-      console.log({class:char.character_classes});
       try {
-        const infos = await getSpellSlotsInfo(char.character_id,char.class_id)
-        console.log({infos});
+        const infos = await getSpellSlotsInfo(character_sheet,char.character_id,char.character_classes);
       } catch (error) {
         console.log(error);
       }
     } catch (error) {
       console.log(error)
     }
-    async function getSpellSlotsInfo(class_id,level){
-      console.log({class_id,level});
+    async function getSpellSlotsInfo(character_sheet,class_id,level){
+      let spellcaster_level = 0
+      level.forEach(item => {
+        if(item.classes.is_spellcaster && item.level > spellcaster_level) {
+          console.log(item.classes.class_spell_slots);
+          spellcaster_level = item.level
+        }
+      })
       try {
         const infos = await prisma.class_spell_slots.findUnique({
           where:{
@@ -121,7 +124,7 @@ async function getCharacterSheet(req,res){
         })
         return infos
       } catch (error) {
-        console.log(error)
+        // console.log(error)
       }
     }
   }

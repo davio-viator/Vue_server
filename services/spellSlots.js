@@ -300,7 +300,10 @@ const wizard = {
   }
 }
 
+  const bard = cleric
+
 module.exports = {
   cleric,
-  wizard
+  wizard,
+  bard
 }
